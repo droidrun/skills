@@ -1,5 +1,6 @@
 {
-  "id": "mobilerun",
+  "id": "openclaw-mobilerun",
+  "skills": ["skills/"],
   "configSchema": {
     "type": "object",
     "properties": {

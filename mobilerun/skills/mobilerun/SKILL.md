@@ -6,41 +6,42 @@ description: >
   Use when the user wants to automate or remotely control an Android device, interact
   with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
   (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
+metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY" } }
 ---
 
 # Mobilerun
 
 Control real Android phones through an API -- tap, swipe, type, take screenshots, read the UI tree, manage apps, and more.
 
-## What You Need
-
-1. A **Mobilerun API key** (starts with `dr_sk_`) from the user
-2. A **connected device** (user's personal phone via Portal APK, or a cloud device)
-
 ## Before You Start
 
-Verify the setup is working:
+Do NOT ask the user for an API key or to set up a device before checking. Always probe first:
 
-1. **Test the API key:**
+1. **Resolve the API key silently:**
+   - Check the `MOBILERUN_API_KEY` environment variable first
+   - If not set, check if the user provided one in the conversation
+   - Only ask the user for a key if neither is available
+
+2. **Test the API key and check for devices in one call:**
    ```
    GET https://api.mobilerun.ai/v1/devices
-   Authorization: Bearer dr_sk_...
+   Authorization: Bearer <key>
    ```
-   - `200` = key is valid
+   - `200` with a device in `state: "ready"` = **good to go, skip all setup, just do what the user asked**
+   - `200` but no devices or all `state: "disconnected"` = device issue (see step 3)
    - `401` = key is bad, expired, or revoked -- ask the user to check https://cloud.mobilerun.ai/api-keys
 
-2. **Check for a connected device:**
-   Look for a device with `state: "ready"` in the response. If none:
-   - No devices at all = user hasn't connected a phone yet
+3. **Only if no ready device:** tell the user the device status and suggest a fix:
+   - No devices at all = user hasn't connected a phone yet, guide them to Portal APK (see [setup.md](./setup.md))
    - Device with `state: "disconnected"` = Portal app lost connection, ask user to reopen it
 
-3. **Confirm device is responsive:**
+4. **Confirm device is responsive** (optional, only if first action fails):
    ```
    GET https://api.mobilerun.ai/v1/devices/{deviceId}/screenshot
    ```
-   If this returns a PNG image, you're good to go.
+   If this returns a PNG image, the device is working.
 
-If the user doesn't have an API key or account yet, see [setup.md](./setup.md) for how to guide them through it.
+**Key principle:** If the API key is set and a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
 
 ## Quick Reference
 

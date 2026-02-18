@@ -1,6 +1,6 @@
 {
   "name": "@mobilerun/openclaw-mobilerun",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OpenClaw plugin for controlling Android phones via the Mobilerun API",
   "main": "index.js",
   "openclaw": {

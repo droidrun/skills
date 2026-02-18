@@ -1,0 +1,18 @@
+{
+  "id": "mobilerun",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "description": "Mobilerun API key (starts with dr_sk_)"
+      }
+    }
+  },
+  "uiHints": {
+    "apiKey": {
+      "label": "Mobilerun API Key",
+      "sensitive": true
+    }
+  }
+}

@@ -1,0 +1,42 @@
+name: Publish to npm
+
+on:
+  push:
+    tags: ['*/v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Extract plugin name from tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          PLUGIN="${TAG%%/v*}"
+          VERSION="${TAG#*/v}"
+          echo "plugin=$PLUGIN" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing $PLUGIN@$VERSION"
+
+      - name: Publish to npm
+        working-directory: ${{ steps.meta.outputs.plugin }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

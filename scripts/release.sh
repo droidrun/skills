@@ -19,7 +19,8 @@ fi
 
 # Bump version (no git tag — npm workspaces doesn't support it)
 cd "$PLUGIN"
-NEW_VERSION=$(npm version "$BUMP" --no-git-tag-version | tr -d 'v')
+npm version "$BUMP" --no-git-tag-version > /dev/null 2>&1
+NEW_VERSION=$(node -p "require('./package.json').version")
 cd ..
 
 # Commit and tag

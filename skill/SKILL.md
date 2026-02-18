@@ -1,6 +1,16 @@
+---
+name: mobilerun
+description: >
+  Control real Android phones through the Mobilerun API. Supports tapping, swiping,
+  typing, taking screenshots, reading the UI accessibility tree, and managing apps.
+  Use when the user wants to automate or remotely control an Android device, interact
+  with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
+  (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
+---
+
 # Mobilerun
 
-Mobilerun lets you control real Android phones through an API. You can tap, swipe, type, take screenshots, read the UI tree, manage apps, and more -- all programmatically.
+Control real Android phones through an API -- tap, swipe, type, take screenshots, read the UI tree, manage apps, and more.
 
 ## What You Need
 

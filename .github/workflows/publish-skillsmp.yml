@@ -1,0 +1,79 @@
+name: Publish to SkillsMP
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: 'Skill name (top-level directory, e.g. "mobilerun")'
+        required: true
+        type: string
+      tag_release:
+        description: 'Create a git tag for this release (e.g. "mobilerun/v1.0.3"). Leave empty to validate only.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SKILL.md
+        run: |
+          SKILL="${{ inputs.skill }}"
+          SKILL_FILE="${SKILL}/SKILL.md"
+
+          if [ ! -f "$SKILL_FILE" ]; then
+            echo "::error::SKILL.md not found at ${SKILL_FILE}"
+            exit 1
+          fi
+
+          # Check YAML frontmatter
+          if ! head -1 "$SKILL_FILE" | grep -q "^---$"; then
+            echo "::error file=$SKILL_FILE::Missing YAML frontmatter (must start with ---)"
+            exit 1
+          fi
+
+          FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "$SKILL_FILE")
+
+          if ! echo "$FRONTMATTER" | grep -q "^name:"; then
+            echo "::error file=$SKILL_FILE::Missing required 'name' field in frontmatter"
+            exit 1
+          fi
+
+          if ! echo "$FRONTMATTER" | grep -q "^description:"; then
+            echo "::error file=$SKILL_FILE::Missing required 'description' field in frontmatter"
+            exit 1
+          fi
+
+          echo "Validated ${SKILL_FILE} successfully."
+
+      - name: Tag release
+        if: inputs.tag_release != ''
+        run: |
+          TAG="${{ inputs.tag_release }}"
+          echo "Creating tag: $TAG"
+          git tag "$TAG"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          SKILL="${{ inputs.skill }}"
+          echo "## SkillsMP Publish Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Skill:** \`$SKILL\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ inputs.tag_release }}" ]; then
+            echo "**Tag created:** \`${{ inputs.tag_release }}\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "_No tag created (validate-only run)._" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> SkillsMP auto-indexes skills from public GitHub repos." >> "$GITHUB_STEP_SUMMARY"
+          echo "> If skills don't appear on [skillsmp.com](https://skillsmp.com), verify the repo is public" >> "$GITHUB_STEP_SUMMARY"
+          echo "> and SKILL.md files use valid frontmatter." >> "$GITHUB_STEP_SUMMARY"

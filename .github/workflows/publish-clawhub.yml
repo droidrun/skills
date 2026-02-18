@@ -1,0 +1,57 @@
+name: Publish to ClawHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: 'Skill name (top-level directory, e.g. "mobilerun")'
+        required: true
+        type: string
+      version:
+        description: 'Version to publish (semver, e.g. "1.0.3")'
+        required: true
+        type: string
+      changelog:
+        description: 'Changelog text for this version'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate skill
+        run: |
+          SKILL="${{ inputs.skill }}"
+          if [ ! -f "${SKILL}/SKILL.md" ]; then
+            echo "::error::SKILL.md not found in ${SKILL}/"
+            exit 1
+          fi
+          echo "Found ${SKILL}/SKILL.md"
+
+      - name: Publish to ClawHub
+        run: |
+          SKILL="${{ inputs.skill }}"
+          VERSION="${{ inputs.version }}"
+          CHANGELOG="${{ inputs.changelog }}"
+
+          npx clawhub@latest login --token "$CLAWHUB_TOKEN" --no-input
+
+          ARGS="--slug $SKILL --version $VERSION --no-input"
+          if [ -n "$CHANGELOG" ]; then
+            ARGS="$ARGS --changelog \"$CHANGELOG\""
+          fi
+
+          eval npx clawhub@latest publish "$SKILL" $ARGS
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

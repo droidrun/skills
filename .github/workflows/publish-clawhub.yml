@@ -1,0 +1,94 @@
+# DISABLED: This workflow is disabled pending ClawHub setup.
+# It currently only supports manual triggering via workflow_dispatch.
+# Once CLAWHUB_TOKEN is configured and publishing is verified,
+# add tag-based triggers (e.g. on push tags: ['*/v*']) to automate releases.
+
+name: Publish to ClawHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: 'Plugin name (top-level directory, e.g. "mobilerun")'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Authenticate with ClawHub
+        run: npx clawhub auth login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+
+      - name: Discover skills
+        id: discover
+        run: |
+          PLUGIN="${{ inputs.plugin }}"
+          SKILLS_DIR="${PLUGIN}/skills"
+
+          if [ ! -d "$SKILLS_DIR" ]; then
+            echo "::error::Skills directory not found: $SKILLS_DIR"
+            exit 1
+          fi
+
+          # Find all skill directories (those containing a SKILL.md)
+          SKILL_PATHS=""
+          for dir in "$SKILLS_DIR"/*/; do
+            if [ -f "${dir}SKILL.md" ]; then
+              SKILL_PATHS="${SKILL_PATHS}${dir}\n"
+            fi
+          done
+
+          if [ -z "$SKILL_PATHS" ]; then
+            echo "::error::No skills found in $SKILLS_DIR (no directories with SKILL.md)"
+            exit 1
+          fi
+
+          echo -e "Found skills:\n$SKILL_PATHS"
+          echo "skills_dir=$SKILLS_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Validate skills
+        run: |
+          SKILLS_DIR="${{ steps.discover.outputs.skills_dir }}"
+          FAILED=0
+
+          for dir in "$SKILLS_DIR"/*/; do
+            if [ -f "${dir}SKILL.md" ]; then
+              echo "Validating ${dir}..."
+              if ! npx clawhub skill validate "$dir"; then
+                echo "::error::Validation failed for ${dir}"
+                FAILED=1
+              fi
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "All skills validated successfully."
+
+      - name: Publish skills
+        run: |
+          SKILLS_DIR="${{ steps.discover.outputs.skills_dir }}"
+
+          for dir in "$SKILLS_DIR"/*/; do
+            if [ -f "${dir}SKILL.md" ]; then
+              echo "Publishing ${dir}..."
+              npx clawhub publish "$dir"
+              echo "Published ${dir} successfully."
+            fi
+          done
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

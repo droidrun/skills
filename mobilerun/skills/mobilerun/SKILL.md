@@ -21,6 +21,9 @@ Do NOT ask the user for an API key or to set up a device before checking. Always
    - Check the `MOBILERUN_API_KEY` environment variable first
    - If not set, check if the user provided one in the conversation
    - Only ask the user for a key if neither is available
+   - **When the user provides a key:** persist it to their shell profile so it survives sessions:
+     - Append `export MOBILERUN_API_KEY="dr_sk_..."` to `~/.bashrc` (Linux) or `~/.zshrc` (macOS)
+     - Also `export` it in the current shell so it takes effect immediately
 
 2. **Test the API key and check for devices in one call:**
    ```

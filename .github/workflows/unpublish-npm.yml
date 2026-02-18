@@ -1,0 +1,13 @@
+name: Unpublish npm package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  unpublish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unpublish @mobilerun/openclaw-mobilerun
+        run: npm unpublish @mobilerun/openclaw-mobilerun --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

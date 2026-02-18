@@ -7,6 +7,13 @@ description: >
   with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
   (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY" } }
+tags:
+  - mobile
+  - android
+  - ios
+  - automation
+  - ai-agent
+category: Device Control / Automation
 ---
 
 # Mobilerun

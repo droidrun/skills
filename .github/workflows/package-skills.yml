@@ -2,9 +2,9 @@ name: Package Skills
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: write
@@ -18,21 +18,13 @@ jobs:
       - name: Package skills
         run: |
           for dir in */; do
-            if [ -d "${dir}skills" ]; then
-              plugin_name="${dir%/}"
-              echo "Packaging plugin ${plugin_name}..."
-              cd "${plugin_name}/skills"
-              for skill_dir in */; do
-                if [ -f "${skill_dir}SKILL.md" ]; then
-                  skill_name="${skill_dir%/}"
-                  echo "  Packaging skill ${skill_name}..."
-                  cd "$skill_name"
-                  zip -r "../../../${skill_name}.skill" . -x '.*'
-                  cd ..
-                  echo "  Created ${skill_name}.skill"
-                fi
-              done
-              cd ../..
+            if [ -f "${dir}SKILL.md" ]; then
+              skill_name="${dir%/}"
+              echo "Packaging ${skill_name}..."
+              cd "$skill_name"
+              zip -r "../${skill_name}.skill" . -x '.*'
+              cd ..
+              echo "Created ${skill_name}.skill"
             fi
           done
 
@@ -43,7 +35,7 @@ jobs:
           path: "*.skill"
 
       - name: Create/update release
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest

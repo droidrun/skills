@@ -255,10 +255,7 @@ When creating tasks, these models can be specified:
 - `google/gemini-2.5-flash`
 - `google/gemini-2.5-pro`
 - `google/gemini-3-flash`
-- `google/gemini-3-pro-preview`
 - `anthropic/claude-sonnet-4.5`
-- `minimax/minimax-m2`
-- `moonshotai/kimi-k2-thinking`
 - `qwen/qwen3-8b`
 
 ---

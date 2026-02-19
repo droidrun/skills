@@ -100,15 +100,17 @@ This permission is required -- without it, the agent cannot read the screen UI t
 
 #### Step 4: Connect to Mobilerun
 
-Two options:
+Two options -- **prefer Option B** (API key) since the agent already has the key:
 
-- **Option A (Login):** Tap **"Connect to Mobilerun"** -- this opens a login page where the user signs in with their Mobilerun account (Google, GitHub, or Discord)
-- **Option B (API Key):** Tell the user to **long-press** "Connect to Mobilerun" -- this opens fields for Token and WSS URL. Tell them to:
-  1. Paste the API key (`dr_sk_...`) in the **Token** field
-  2. Make sure the **WSS URL** field says exactly: `wss://api.mobilerun.ai/v1/providers/personal/join` -- if it's different, they should correct it
-  3. Tap **Connect**
+- **Option B (API Key) -- preferred:** Tell the user to **long-press** "Connect to Mobilerun" -- this opens a **"Connect with API Key"** dialog with a single API key field. Tell them to:
+  1. Paste the API key (`dr_sk_...`) in the **API Key** field
+  2. Tap **Connect**
 
-For Option B, the agent should provide the API key to the user -- it's the same key used for API calls.
+  The agent should provide the API key to the user -- it's the same key used for API calls.
+
+- **Option A (Login) -- fallback:** Tap **"Connect to Mobilerun"** (normal tap):
+  - If already logged in (API key stored on device) → connects directly, no browser
+  - If not logged in → opens a browser login page (Google, GitHub, or Discord)
 
 #### Step 5: Verify Connection
 
@@ -139,6 +141,7 @@ Look for a device with `provider: "personal"`:
 - **Device was `ready` but stops responding**: The phone may have locked or the Portal app was killed by the OS. Ask user to check the phone.
 - **No device appears at all**: Portal APK isn't installed, accessibility permission wasn't granted, or the user didn't connect with their API key.
 - **Connection fails in Portal app**: The API key may be wrong or expired. Ask the user to verify the key.
+- **User wants to switch accounts**: They can tap **Logout** (shown below Device ID when connected, or as a subtitle under "Connect to Mobilerun" when disconnected). Logout clears credentials; the next Connect tap will open the browser for a fresh login. Note: **Disconnect** only pauses the connection and can be resumed instantly -- it does not clear credentials.
 
 ### Cloud Devices
 

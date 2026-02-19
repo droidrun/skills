@@ -6,7 +6,7 @@ description: >
   Use when the user wants to automate or remotely control an Android device, interact
   with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
   (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
-metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY" } }
+metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "config": ["skills.entries.mobilerun.apiKey"] } } }
 ---
 
 # Mobilerun

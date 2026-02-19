@@ -69,6 +69,8 @@ Authorization: Bearer dr_sk_...
 
 A personal device is the user's own Android phone connected to Mobilerun via the Droidrun Portal app.
 
+**When guiding a user through setup, walk them through one step at a time.** Don't list all steps at once -- give them the current step, wait for them to confirm they've done it, then move to the next. This prevents the user from getting overwhelmed or skipping steps.
+
 #### Step 1: Download the Portal APK
 
 1. On the Android device, open Chrome and go to **https://droidrun.ai/portal**

@@ -73,6 +73,7 @@ Direct the user to https://cloud.mobilerun.ai/billing to view and manage their s
 **Free (no plan) users** can connect their own personal device via Portal APK and use the Tools API to control it with any agent (e.g. OpenClaw). No subscription needed for direct device control on your own phone.
 
 #TODO: free plan is still in production -- update with final details when ready
+
 ### Known Plan Limit Errors
 
 | Status | Detail | Meaning |

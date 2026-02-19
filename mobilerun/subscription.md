@@ -72,6 +72,8 @@ Direct device control via the Tools API (tap, swipe, screenshot, etc.) on a pers
 Direct the user to https://cloud.mobilerun.ai/billing to view and manage their subscription.
 
 ### Free (OpenClaw)
+An add-on, not a standalone plan -- it stacks with any paid plan. For example, Hobby + Free OpenClaw gives you 2 personal device slots total.
+
 - Connect your personal Android device via Portal APK
 - Full direct device control (tap, swipe, screenshot, UI tree) at no cost
 - No AI agent credits or cloud devices included

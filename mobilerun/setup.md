@@ -101,7 +101,11 @@ This permission is required -- without it, the agent cannot read the screen UI t
 Two options:
 
 - **Option A (Login):** Tap **"Connect to Mobilerun"** -- this opens a login page where the user signs in with their Mobilerun account (Google, GitHub, or Discord)
-- **Option B (API Key):** **Long-press** "Connect to Mobilerun" -- this opens a field labeled "Token". Despite the label, the user should paste their Mobilerun API key (`dr_sk_...`) here, then tap **Connect**
+- **Option B (API Key):** **Long-press** "Connect to Mobilerun" -- this opens fields for Token and WSS URL. The user should paste their Mobilerun API key (`dr_sk_...`) in the Token field, then tap **Connect**. Make sure the WSS URL is set to:
+  ```
+  wss://api.mobilerun.ai/v1/providers/personal/join
+  ```
+  If the user accidentally changed this URL, it won't connect -- reset it to the value above.
 
 For Option B, the agent should provide the API key to the user -- it's the same key used for API calls.
 

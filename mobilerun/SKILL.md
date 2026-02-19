@@ -11,7 +11,7 @@ metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY" } }
 
 # Mobilerun
 
-Control real Android phones through an API -- tap, swipe, type, take screenshots, read the UI tree, manage apps, and more.
+Mobilerun turns your Android phone into a tool that AI can control. Instead of manually tapping through apps, you connect your phone and let an AI agent do it for you -- navigate apps, fill out forms, extract information, automate repetitive tasks, or anything else you'd normally do by hand. It works with your own personal device through a simple app called Droidrun Portal, and everything happens through a straightforward API: take screenshots to see the screen, read the UI tree to understand what's on it, then tap, swipe, and type to interact. No rooting, no emulators, just your real phone controlled remotely.
 
 ## Before You Start
 

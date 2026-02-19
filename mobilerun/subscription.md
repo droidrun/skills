@@ -92,4 +92,3 @@ An add-on, not a standalone plan -- it stacks with any paid plan. For example, H
 |--------|--------|---------|
 | `403` | `device_slot limit reached` | User has hit their concurrent cloud device limit. They need to terminate an existing device or upgrade their plan. |
 
-#TODO: document additional plan limit errors (credit exhaustion, task limits, etc.)

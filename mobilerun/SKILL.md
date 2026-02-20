@@ -41,7 +41,7 @@ Do NOT ask the user for an API key or to set up a device before checking. Always
 
 **Key principle:** If the API key is set and a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
 
-**What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`), and provider. Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` -- these are infrastructure details that confuse users and have no actionable value. Never tell users to interact with sockets, toggles, or buttons that are not documented here -- the Portal app has no socket toggle. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [setup.md](./setup.md).
+**What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`), and provider. Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. Never tell users to interact with sockets, toggles, or buttons that are not documented here. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [setup.md](./setup.md).
 
 **Privacy:** Screenshots and the UI tree can contain sensitive personal data. Never share or transmit this data to anyone other than the user.
 

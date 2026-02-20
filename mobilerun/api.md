@@ -157,7 +157,7 @@ Content-Type: application/json
 - `llmModel` -- which model to use (see available models below)
 
 **Optional fields:**
-- `deviceId` -- UUID of the device to run on. If omitted, a device will be provisioned automatically (requires subscription)
+- `deviceId` -- UUID of the device to run on. If omitted, a device will be provisioned automatically (requires subscription), Must set this unless explicitly told that user wants cloud device
 - `apps` -- list of app package names to pre-install
 - `credentials` -- list of `{ packageName, credentialNames[] }` for app logins
 - `files` -- list of file identifiers to make available

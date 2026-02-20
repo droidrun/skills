@@ -147,7 +147,6 @@ Content-Type: application/json
   "stealth": false,
   "temperature": 0.5,
   "executionTimeout": 1000,
-  "displayId": 0,
   "outputSchema": null,
   "vpnCountry": "US"
 }
@@ -168,7 +167,6 @@ Content-Type: application/json
 - `stealth` -- enable stealth mode (default: false, requires Starter+ plan). **Always set to `false`** unless the user explicitly requests it.
 - `temperature` -- LLM temperature (default: 0.5)
 - `executionTimeout` -- timeout in seconds (default: 1000)
-- `displayId` -- device display ID (default: 0)
 - `outputSchema` -- JSON schema for structured output (nullable)
 - `vpnCountry` -- route through VPN in a specific country: `US`, `BR`, `FR`, `DE`, `IN`, `JP`, `KR`, `ZA`. Only use if the task specifically requires a certain region (e.g. geo-restricted content). VPN adds latency and can cause issues -- avoid unless needed.
 

@@ -6,7 +6,7 @@ description: >
   Use when the user wants to automate or remotely control an Android device, interact
   with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
   (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
-metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "config": ["skills.entries.mobilerun.apiKey"] } } }
+metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"] } } }
 ---
 
 # Mobilerun
@@ -15,31 +15,28 @@ Mobilerun turns your Android phone into a tool that AI can control. Instead of m
 
 ## Before You Start
 
-Do NOT ask the user for an API key or to set up a device before checking. Always probe first:
+The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles credential setup before this skill loads. Do NOT ask the user for an API key. Just use it.
 
-1. **Resolve the API key:**
-   - If `MOBILERUN_API_KEY` is not available, ask the user for their key and save it to `~/.openclaw/openclaw.json` under `skills.entries.mobilerun.apiKey` (merge with existing config, don't overwrite)
-
-2. **Test the API key and check for devices in one call:**
+1. **Check for devices:**
    ```
    GET https://api.mobilerun.ai/v1/devices
-   Authorization: Bearer <key>
+   Authorization: Bearer <MOBILERUN_API_KEY>
    ```
    - `200` with a device in `state: "ready"` = **good to go, skip all setup, just do what the user asked**
-   - `200` but no devices or all `state: "disconnected"` = device issue (see step 3)
-   - `401` = key is bad, expired, or revoked -- ask the user to check https://cloud.mobilerun.ai/api-keys
+   - `200` but no devices or all `state: "disconnected"` = device issue (see step 2)
+   - `401` = key is invalid, expired, or revoked -- ask the user to check https://cloud.mobilerun.ai/api-keys
 
-3. **Only if no ready device:** tell the user the device status and suggest a fix:
+2. **Only if no ready device:** tell the user the device status and suggest a fix:
    - No devices at all = user hasn't connected a phone yet, guide them to Portal APK (see [setup.md](./setup.md))
    - Device with `state: "disconnected"` = Portal app lost connection, ask user to reopen it
 
-4. **Confirm device is responsive** (optional, only if first action fails):
+3. **Confirm device is responsive** (optional, only if first action fails):
    ```
    GET https://api.mobilerun.ai/v1/devices/{deviceId}/screenshot
    ```
    If this returns a PNG image, the device is working.
 
-**Key principle:** If the API key is set and a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
+**Key principle:** If a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
 
 **What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`), and provider. Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. Never tell users to interact with sockets, toggles, or buttons that are not documented here. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [setup.md](./setup.md).
 

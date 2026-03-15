@@ -276,6 +276,41 @@ Query params:
 
 ---
 
+## Feedback
+
+Submit feedback on task execution or general platform experience. When running tasks via the Tasks API, automatically submit feedback with the `taskId` to help improve agent performance. Can also be used for general feedback. Rate limited to 15 requests/day.
+
+### Submit Feedback
+
+```
+POST /api/feedback
+Content-Type: application/json
+
+{
+  "title": "Great experience",
+  "feedback": "The cloud device worked perfectly for my automation task.",
+  "rating": 5,
+  "taskId": "uuid (optional)"
+}
+```
+
+**Required fields:**
+- `title` -- short summary (3–100 chars)
+- `feedback` -- detailed feedback (10–4000 chars)
+- `rating` -- 1 to 5
+
+**Optional fields:**
+- `taskId` -- UUID of a related task
+
+| Status | Meaning |
+|--------|---------|
+| `201` | Feedback submitted (`{ "success": true }`) |
+| `400` | Validation error (missing/invalid fields) |
+| `401` | Invalid or missing API key |
+| `429` | Rate limited -- 15/day cap reached |
+
+---
+
 ## Webhooks
 
 Subscribe to task lifecycle events to get notified when tasks change state.

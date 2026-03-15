@@ -100,17 +100,14 @@ This permission is required -- without it, the agent cannot read the screen UI t
 
 #### Step 4: Connect to Mobilerun
 
-Two options -- **prefer Option B** (API key) since the agent already has the key:
+Two options:
 
-- **Option B (API Key) -- preferred:** Tell the user to **long-press** "Connect to Mobilerun" -- this opens a **"Connect with API Key"** dialog with a single API key field. Tell them to:
-  1. Paste the API key (`dr_sk_...`) in the **API Key** field
-  2. Tap **Connect**
-
-  The agent should provide the API key to the user -- it's the same key used for API calls.
-
-- **Option A (Login) -- fallback:** Tap **"Connect to Mobilerun"** (normal tap):
+- **Option A (Login) -- preferred:** Tap **"Connect to Mobilerun"** (normal tap):
   - If already logged in (API key stored on device) → connects directly, no browser
   - If not logged in → opens a browser login page (Google, GitHub, or Discord)
+
+- **Option B (API Key):** Tell the user to **long-press** "Connect to Mobilerun" -- this opens a **"Connect with API Key"** dialog. The user can copy their API key from https://cloud.mobilerun.ai/api-keys and paste it in.
+  - **Never print, paste, or reveal the API key in chat.** The user should copy it directly from the dashboard themselves.
 
 #### Step 5: Verify Connection
 

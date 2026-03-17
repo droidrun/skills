@@ -1,7 +1,7 @@
-# Mobilerun Setup
+# Mobilerun Reference
 
-This document describes how Mobilerun authentication and device connectivity works,
-so you can diagnose issues and guide the user through setup when needed.
+Read this document when helping with setup, connection issues, billing, webhooks, or the app library.
+For core API usage (phone control, tasks, device management), see [SKILL.md](./SKILL.md).
 
 ---
 
@@ -33,20 +33,6 @@ The user needs to:
 
 The key will look like: `dr_sk_a1b2c3d4e5f6...`
 
-### Verifying the API Key
-
-After receiving a key from the user, verify it works:
-
-```
-GET https://api.mobilerun.ai/v1/devices
-Authorization: Bearer dr_sk_...
-```
-
-| Response | Meaning |
-|----------|---------|
-| `200` with JSON body | Key is valid. The response shows the user's devices (may be empty if no devices connected yet) |
-| `401 Unauthorized` | Key is invalid, expired, or revoked |
-
 ### Troubleshooting Auth Issues
 
 **User provides a key that doesn't start with `dr_sk_`:**
@@ -63,15 +49,13 @@ Authorization: Bearer dr_sk_...
 
 ---
 
-## Device Connectivity
-
-### Personal Devices (Portal APK)
+## Device Setup (Portal APK)
 
 A personal device is the user's own Android phone connected to Mobilerun via the Droidrun Portal app.
 
-Guide the user step by step through out the setup process
+Guide the user step by step through the setup process.
 
-#### Step 1: Download the Portal APK
+### Step 1: Download the Portal APK
 
 1. On the Android device, open Chrome and go to **https://droidrun.ai/portal**
 2. This redirects to the GitHub releases page for the Portal app
@@ -79,7 +63,7 @@ Guide the user step by step through out the setup process
 4. Tap the file named **`droidrun-portal-vx.x.x.apk`** (the version number varies) -- this is the APK file to download
    - Do NOT tap "Source code (zip)" or "Source code (tar.gz)" -- those are the source code, not the app
 
-#### Step 2: Install the APK
+### Step 2: Install the APK
 
 1. Once downloaded, tap the APK file to install it (or find it in Downloads)
 2. **Android may show a warning** like "This app may be harmful" or "Install from unknown sources blocked":
@@ -88,7 +72,7 @@ Guide the user step by step through out the setup process
    - It uses Android's Accessibility API (the same technology used by screen readers and accessibility tools) to read and interact with the screen
    - Tap **"Install anyway"** or enable "Install unknown apps" for Chrome in Settings when prompted
 
-#### Step 3: Enable Accessibility
+### Step 3: Enable Accessibility
 
 1. Open the Droidrun Portal app
 2. A red banner at the top says **"Accessibility Service Not Enabled"** -- tap **"Enable Now"**
@@ -98,18 +82,18 @@ Guide the user step by step through out the setup process
 
 This permission is required -- without it, the agent cannot read the screen UI tree or control the device.
 
-#### Step 4: Connect to Mobilerun
+### Step 4: Connect to Mobilerun
 
 Two options:
 
 - **Option A (Login) -- preferred:** Tap **"Connect to Mobilerun"** (normal tap):
-  - If already logged in (API key stored on device) → connects directly, no browser
-  - If not logged in → opens a browser login page (Google, GitHub, or Discord)
+  - If already logged in (API key stored on device) -> connects directly, no browser
+  - If not logged in -> opens a browser login page (Google, GitHub, or Discord)
 
 - **Option B (API Key):** Tell the user to **long-press** "Connect to Mobilerun" -- this opens a **"Connect with API Key"** dialog. The user can copy their API key from https://cloud.mobilerun.ai/api-keys and paste it in.
   - **Never print, paste, or reveal the API key in chat.** The user should copy it directly from the dashboard themselves.
 
-#### Step 5: Verify Connection
+### Step 5: Verify Connection
 
 Once connected, the Portal app shows the connection status. The device should now appear in `GET /devices` with `state: "ready"`.
 
@@ -118,21 +102,7 @@ If it doesn't show up, check:
 - Is the Portal app still open and in the foreground (at least initially)?
 - Does the phone have a stable internet connection?
 
-#### Checking Device Status
-
-```
-GET https://api.mobilerun.ai/v1/devices
-```
-
-Look for a device with `provider: "personal"`:
-
-| Result | Meaning |
-|--------|---------|
-| No personal device in list | Portal APK isn't installed, not connected, or accessibility permission not granted |
-| Device with `state: "ready"` | Device is connected and ready to use |
-| Device with `state: "disconnected"` | Portal app lost connection. User should check that the app is open and phone has internet |
-
-#### Common Issues
+### Common Issues
 
 - **Device shows `disconnected`**: Portal app was closed, phone went to sleep with aggressive battery optimization, or phone lost internet. Ask user to reopen the Portal app.
 - **Device was `ready` but stops responding**: The phone may have locked or the Portal app was killed by the OS. Ask user to check the phone.
@@ -144,33 +114,156 @@ Look for a device with `provider: "personal"`:
 
 Cloud devices are virtual/emulated devices hosted by Mobilerun. They require a paid subscription.
 
-If a user tries to provision a cloud device without the right plan, the API will return an error.
-In that case, let them know they need to upgrade at https://cloud.mobilerun.ai.
+If a user tries to provision a cloud device without the right plan, the API will return an error. Let them know they need to upgrade at https://cloud.mobilerun.ai/billing.
 
 Cloud devices go through these states after provisioning:
 `creating` -> `assigned` -> `ready`
 
-Use `GET /devices/{deviceId}/wait` to block until the device is ready (avoids polling).
+Use `GET /devices/{deviceId}/wait` to block until the device is ready.
 
 ---
 
-## Accounts & Plans
+## Plans & Subscriptions
 
-- **Free accounts** can connect personal devices via Portal APK and use the Tools API to control them
-- **Paid plans** add cloud device provisioning, task execution (AI agent credits), and additional features
+Plans page: https://cloud.mobilerun.ai/billing
 
-For full plan details (Hobby, Starter, Pro, Enterprise), see [subscription.md](./subscription.md).
+### Plans Overview
 
-If an API call fails with a billing/plan error, direct the user to https://cloud.mobilerun.ai/billing.
+| Plan | Monthly | Annual | Credits | Cloud Device | Extras |
+|------|---------|--------|---------|-------------|--------|
+| **Free (OpenClaw)** | Free | Free | -- | 1 personal device | OpenClaw Integration only |
+| **Hobby** | $5/mo | $4/mo ($48/yr) | 500 | Emulated Device + 1 personal device | OpenClaw Integration |
+| **Pro** | $50/mo | $40/mo ($480/yr) | 5,000 | Physical Device + Emulated Device | OpenClaw Integration, Advanced Stealth Mode, Priority Support |
+| **Enterprise** | Custom | Custom | Custom | Premium Device Farm | OpenClaw Integration, Custom Build & Ops, Dedicated Infra & SLA |
+
+Annual billing saves 20%.
+
+### What Each Plan Includes
+
+**Hobby ($5/mo)**
+- 500 AI agent credits
+- 1 personal device (via Portal APK)
+- Emulated cloud device
+- Good for getting started and experimenting
+
+**Pro ($50/mo)**
+- 5,000 AI agent credits
+- Physical Device -- a dedicated real physical Android device in the cloud
+- Emulated cloud device
+- Advanced Stealth Mode included
+- Priority Support
+- Good for production workloads and apps that detect emulators
+
+**Enterprise (Custom)**
+- Premium Device Farm
+- Custom Build & Ops
+- Dedicated Infra & SLA
+- Contact sales for pricing
+
+### Credits
+
+Credits are consumed when using cloud devices and running tasks via the Tasks API.
+Direct device control via the Tools API (tap, swipe, screenshot, etc.) on a personal device does not consume credits.
+
+**Credit consumption:**
+- **1 credit per device minute** -- while a cloud device is running
+- **~0.5 credits per agent step** -- when running a task via the Tasks API
+
+### Device Types
+
+| Type | Description | Available on |
+|------|-------------|-------------|
+| `dedicated_emulated_device` | Cloud emulated device | Hobby, Pro |
+| `dedicated_physical_device` | Dedicated real physical phone | Pro |
+| `dedicated_premium_device` | Enterprise-grade device | Enterprise |
+
+### When to Recommend an Upgrade
+
+- **User has no plan and wants cloud devices**: Any paid plan works, recommend Hobby to start
+- **User needs more credits**: Suggest moving up a tier
+- **User's app detects emulators**: They need Pro (physical device + advanced stealth mode)
+- **User needs guaranteed uptime / SLA**: Enterprise
+- **User hits a billing error on `POST /devices`**: Their plan doesn't support the device type they requested
+
+Direct the user to https://cloud.mobilerun.ai/billing to view and manage their subscription.
+
+### Free (OpenClaw)
+
+An add-on, not a standalone plan -- it stacks with any paid plan.
+
+- Connect your personal Android device via Portal APK
+- Full direct device control (tap, swipe, screenshot, UI tree) at no cost
+- No AI agent credits or cloud devices included
+- **To claim:**
+  1. Go to https://cloud.mobilerun.ai/billing
+  2. Click **"Authenticate your OpenClaw"** under the Free plan
+  3. Enter your X handle and click **"Continue"**
+  4. A post preview is shown with a unique verification code -- click **"Post on X"** to share it
+  5. Click **"Claim your access"** -- this shows your verification code and status
+  6. Click **"Verify post"** -- once the post is detected, access is activated
 
 ---
 
-## Quick Checklist
+## Webhooks
 
-When starting a session, verify:
+Subscribe to task lifecycle events to get notified when tasks change state.
 
-1. **API key works** -- `GET /devices` returns 200
-2. **Device is available** -- at least one device with `state: "ready"` in the response
-3. **Device is responsive** -- `GET /devices/{id}/screenshot` returns a PNG image
+### Subscribe
 
-If all three pass, you're ready to control the phone. See [phone-api.md](./phone-api.md) for the full API reference.
+```
+POST /hooks/subscribe
+Content-Type: application/json
+
+{
+  "targetUrl": "https://your-server.com/webhook",
+  "events": ["completed", "failed"],
+  "service": "other"
+}
+```
+
+Events: `created`, `running`, `completed`, `failed`, `cancelled`, `paused`
+Services: `zapier`, `n8n`, `make`, `internal`, `other`
+
+### List Hooks
+
+```
+GET /hooks
+```
+
+### Get Hook
+
+```
+GET /hooks/{hook_id}
+```
+
+### Edit Hook
+
+```
+POST /hooks/{hook_id}/edit
+Content-Type: application/json
+
+{ "events": ["completed"], "state": "active" }
+```
+
+### Unsubscribe
+
+```
+POST /hooks/{hook_id}/unsubscribe
+```
+
+---
+
+## App Library
+
+### List Available Apps
+
+```
+GET /apps
+```
+
+Query params:
+- `page` (default: 1), `pageSize` (default: 10)
+- `source` -- `all`, `uploaded`, `store`, `queued` (default: `all`)
+- `query` -- search by name
+- `sortBy` -- `createdAt`, `name` (default: `createdAt`)
+- `order` -- `asc`, `desc` (default: `desc`)

@@ -1,11 +1,11 @@
 ---
 name: mobilerun
 description: >
-  Control real Android phones through the Mobilerun API. Supports tapping, swiping,
-  typing, taking screenshots, reading the UI accessibility tree, and managing apps.
-  Use when the user wants to automate or remotely control an Android device, interact
-  with mobile apps, or run AI agent tasks on a phone. Requires a Mobilerun API key
-  (prefixed dr_sk_) and a connected device (personal phone via Portal APK or cloud device).
+  Load this skill whenever the user wants to control, automate, or interact with a phone
+  or mobile device. This includes: tapping, swiping, typing, taking screenshots, reading
+  the screen, managing apps, running AI agent tasks on a phone, or any form of phone/mobile
+  automation. Also load when the user mentions Mobilerun, Droidrun, or phone control.
+  Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"] } } }
 ---
 

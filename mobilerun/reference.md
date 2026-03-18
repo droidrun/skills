@@ -251,19 +251,3 @@ Content-Type: application/json
 POST /hooks/{hook_id}/unsubscribe
 ```
 
----
-
-## App Library
-
-### List Available Apps
-
-```
-GET /apps
-```
-
-Query params:
-- `page` (default: 1), `pageSize` (default: 10)
-- `source` -- `all`, `uploaded`, `store`, `queued` (default: `all`)
-- `query` -- search by name
-- `sortBy` -- `createdAt`, `name` (default: `createdAt`)
-- `order` -- `asc`, `desc` (default: `desc`)

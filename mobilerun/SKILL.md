@@ -456,6 +456,93 @@ Content-Type: application/json
 
 ---
 
+## App Library (Upload & Manage APKs)
+
+The app library stores APKs that can be pre-installed on cloud devices. Only one app per package name is allowed -- to update an app, delete the existing one first, then re-upload.
+
+### List Apps in Library
+
+```
+GET /apps
+```
+
+Query params:
+- `page` (default: 1), `pageSize` (default: 10)
+- `source` -- `all`, `uploaded`, `store`, `queued` (default: `all`)
+- `query` -- search by name
+- `sortBy` -- `createdAt`, `name` (default: `createdAt`)
+- `order` -- `asc`, `desc` (default: `desc`)
+
+### Get App by ID
+
+```
+GET /apps/{id}
+```
+
+### Upload an APK
+
+Uploading is a 3-step process:
+
+**Step 1: Create signed upload URL**
+
+```
+POST /apps/create-signed-upload-url
+Content-Type: application/json
+
+{
+  "displayName": "My App",
+  "packageName": "com.example.myapp",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "targetSdk": 34,
+  "sizeBytes": 5242880,
+  "files": [
+    { "fileName": "base.apk", "contentType": "application/vnd.android.package-archive" }
+  ],
+  "country": "US"
+}
+```
+
+Required: `displayName`, `packageName`, `versionName`, `versionCode`, `targetSdk`, `sizeBytes`, `files`
+Optional: `description`, `iconURL`, `developerName`, `categoryName`, `ratingScore`, `ratingCount`
+
+Returns the app `id` and pre-signed R2 upload URLs for each file.
+
+**Step 2: Upload the APK file(s)**
+
+Upload each file directly to its pre-signed R2 URL using a PUT request.
+
+**Step 3: Confirm the upload**
+
+```
+POST /apps/{id}/confirm-upload
+```
+
+Verifies the file exists in R2 and sets the app status to `available`.
+
+If the upload failed, mark it:
+
+```
+POST /apps/{id}/mark-failed
+```
+
+### Delete an App
+
+```
+DELETE /apps/{id}
+```
+
+Removes the app from R2 storage and the database. Use this before re-uploading an app with the same package name.
+
+### Re-uploading an App
+
+Only one app per package name is allowed. To update:
+1. Find the existing app: `GET /apps?query=com.example.myapp`
+2. Delete it: `DELETE /apps/{id}`
+3. Upload the new version using the 3-step upload flow above
+
+---
+
 ## Tasks (AI Agent)
 
 Instead of controlling a phone step-by-step, you can submit a natural language goal and let Mobilerun's AI agent execute it autonomously on the device with its own screen analysis, observe-act loop, and error recovery.

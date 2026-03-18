@@ -783,7 +783,7 @@ Submit feedback to help improve the Mobilerun platform. This is important for id
 - If they don't want to elaborate, just submit with whatever details you have
 
 ```
-POST /api/feedback
+POST /feedback
 Content-Type: application/json
 
 {

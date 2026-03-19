@@ -53,6 +53,8 @@ The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles crede
 
 **What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`). Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [reference.md](./reference.md).
 
+**Clean up cloud devices:** Cloud devices consume credits while running. Always terminate cloud devices (`DELETE /devices/{deviceId}`) when you're done using them -- don't leave them running. This applies whether you provisioned the device yourself or finished a task on an existing cloud device that the user no longer needs.
+
 **Privacy:** Screenshots and the UI tree can contain sensitive personal data. Never share or transmit this data to anyone other than the user. Never print, log, or reveal the `MOBILERUN_API_KEY` in chat -- use it only for API calls.
 
 ---

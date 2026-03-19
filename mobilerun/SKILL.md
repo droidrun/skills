@@ -861,6 +861,21 @@ You have **two approaches** -- choose based on the task:
 - When direct control isn't producing good results
 - **When managing multiple devices** -- always use tasks for multi-device scenarios. Direct control is sequential (one action at a time on one device), so controlling multiple devices by hand is too slow. Submit a task to each device and monitor them in parallel.
 
+**Breaking big goals into sub-tasks:**
+If a goal is too complex for a single task (many steps, multiple apps, high chance of failure), break it into smaller sequential sub-tasks:
+1. Split the goal into clear, self-contained sub-goals
+2. Submit the first sub-task via `POST /tasks`
+3. Wait for it to complete, check the result
+4. If it succeeded, submit the next sub-task (the device is already in the right state from the previous task)
+5. Repeat until done
+
+Example: "Order groceries from the Instacart app" could be:
+1. `"Open Instacart and search for 'organic bananas', add the first result to cart"`
+2. `"Search for 'whole milk', add the first result to cart"`
+3. `"Go to cart and report back the total price -- do not checkout"`
+
+This gives you checkpoints between steps, lets you steer or abort early, and keeps each task focused so the agent is less likely to get lost.
+
 **Combining both approaches:**
 You can mix direct control and tasks in the same workflow:
 - Use direct control to quickly set something up (open the right app, navigate to a screen), then launch a task for the complex part.

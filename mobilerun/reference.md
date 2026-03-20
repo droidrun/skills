@@ -66,11 +66,9 @@ Guide the user step by step through the setup process.
 ### Step 2: Install the APK
 
 1. Once downloaded, tap the APK file to install it (or find it in Downloads)
-2. **Android may show a warning** like "This app may be harmful" or "Install from unknown sources blocked":
-   - This is normal for apps installed outside the Play Store
-   - Droidrun Portal is open source -- the full source code is available on GitHub at https://github.com/droidrun/droidrun-portal
-   - It uses Android's Accessibility API (the same technology used by screen readers and accessibility tools) to read and interact with the screen
-   - Tap **"Install anyway"** or enable "Install unknown apps" for Chrome in Settings when prompted
+2. **Android may show a sideloading prompt** -- this is standard for apps distributed outside the Play Store (like beta apps or open-source projects):
+   - Droidrun Portal is open source: https://github.com/droidrun/droidrun-portal
+   - Follow the on-screen prompts to complete installation
 
 ### Step 3: Enable Accessibility
 

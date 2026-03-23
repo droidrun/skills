@@ -291,6 +291,46 @@ To tap "Chrome": bounds are (533,1222,706,1422), so tap at x=(533+706)/2=619, y=
 
 Use `filter=true` for a cleaner tree focused on actionable elements (filters out non-interactive containers).
 
+**Never dump the full UI state with `jq '.'`** — the a11y tree is deeply nested and can be tens of thousands of lines on screens with lists, grids, or feeds. Output will be truncated from the beginning, and you will silently lose data without knowing it.
+
+**Always use targeted jq filters:**
+
+```bash
+# Get all clickable/interactive elements
+curl -s "https://api.mobilerun.ai/v1/devices/{id}/ui-state?filter=true" \
+  -H "Authorization: Bearer $MOBILERUN_API_KEY" | \
+  jq '[.a11y_tree | recurse(.children[]?) |
+  select(.isClickable==true or .isEditable==true) |
+  {text: (.text // .contentDescription), bounds: .boundsInScreen, isEditable}]'
+
+# Get elements with content descriptions (media items, icons, etc.)
+curl -s "https://api.mobilerun.ai/v1/devices/{id}/ui-state?filter=true" \
+  -H "Authorization: Bearer $MOBILERUN_API_KEY" | \
+  jq '[.a11y_tree | recurse(.children[]?) |
+  select(.contentDescription != null and .contentDescription != "") |
+  {desc: .contentDescription, bounds: .boundsInScreen, isClickable}]'
+
+# Get editable fields only
+curl -s "https://api.mobilerun.ai/v1/devices/{id}/ui-state?filter=true" \
+  -H "Authorization: Bearer $MOBILERUN_API_KEY" | \
+  jq '[.a11y_tree | recurse(.children[]?) |
+  select(.isEditable==true) | {text, resourceId, bounds: .boundsInScreen}]'
+
+# Get phone state + screen bounds only (lightweight, always safe)
+curl -s "https://api.mobilerun.ai/v1/devices/{id}/ui-state?filter=true" \
+  -H "Authorization: Bearer $MOBILERUN_API_KEY" | \
+  jq '{phone_state, device_context}'
+```
+
+**Truncation detection:** If a ui-state response does not begin with `{` or appears to start mid-JSON, the output was truncated. Do not attempt to infer or reconstruct missing data — re-fetch with a targeted jq filter.
+
+**After extracting elements, sanity-check the result:**
+- **Count** — does the number of items make sense for what's on screen? A 3-column grid with 4 visible rows should yield ~12 items, not 8.
+- **Bounds continuity** — items in a grid should tile from x=0. If your first item starts at x=361 instead of x=0, you are missing the left column.
+- **Sort order** — if items should be chronological, verify dates are sequential. A gap or jump suggests missing entries.
+
+If the count or bounds look wrong, re-fetch with a more specific filter before proceeding.
+
 ---
 
 ## Device Actions
@@ -606,6 +646,8 @@ You don't see the phone screen -- the agent on the device does. Write prompts th
 - Good: `"Open Settings in the Chrome app and enable Dark Mode"`
 - You don't know what the screen looks like. The on-device agent can see it -- let it handle the navigation.
 
+**Don't pass your own UI observations into a task instruction.** If you've already read the ui-state and identified an exact element, tap it directly — don't describe it to the agent. If you're submitting a task, describe the *goal* and let the agent do its own observation. Mixing the two — observing yourself, then handing off a screen-state description — means the agent acts on your interpretation of the screen rather than its own, and any error in your observation (truncated data, wrong coordinates) gets baked in silently.
+
 **Be specific about the important details:**
 - Name the exact app (not "the browser" -- say "Chrome")
 - Specify exact text to type or send
@@ -823,6 +865,9 @@ Content-Type: application/json
 ---
 
 ## Common Patterns
+
+**Data integrity — never fill gaps:**
+If extracted data is incomplete (truncated output, missing items, suspicious count), re-query with a better jq filter. Never infer or fabricate missing entries. If you cannot get a complete result after two attempts, tell the user what's missing and why before proceeding.
 
 **Observe-Act Loop:**
 Most phone control tasks follow this cycle:

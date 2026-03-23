@@ -6,7 +6,7 @@ description: >
   the screen, managing apps, running AI agent tasks on a phone, or any form of phone/mobile
   automation. Also load when the user mentions Mobilerun, Droidrun, or phone control.
   Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
-metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl"] } } }
+metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
 
 # Mobilerun

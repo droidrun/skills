@@ -139,11 +139,11 @@ This blocks until the device state transitions to `ready`.
 When the user wants to run a task but has no ready device, provision a temporary cloud device, run the task on it, then clean up:
 1. `POST /devices?deviceType=dedicated_emulated_device` with `{"name": "temp-task-device", "apps": [...]}` -- include any apps the task needs
 2. `GET /devices/{deviceId}/wait` -- wait until ready
-3. `POST /tasks` with the new `deviceId` -- run the task
-4. Monitor via `GET /tasks/{taskId}/status` until the task finishes
-5. `DELETE /devices/{deviceId}` -- terminate the device after the task completes (or fails)
+3. `POST /tasks` with the new `deviceId` -- run the task (or submit multiple tasks -- they will queue and execute in order)
+4. Monitor via `GET /tasks/{taskId}/status` until all tasks finish
+5. `DELETE /devices/{deviceId}` -- terminate the device
 
-Always terminate temporary devices after use -- they consume credits while running.
+**Important:** `DELETE /devices/{deviceId}` terminates the device immediately. If any tasks are still queued or running on that device, they will be orphaned or interrupted. Always wait for all tasks to finish before terminating.
 
 ### Terminate a Cloud Device
 
@@ -221,10 +221,6 @@ Returns an `AndroidState` object with three sections:
     "scaledDensity": 1.75,
     "widthPixels": 720,
     "heightPixels": 1616
-  },
-  "filtering_params": {
-    "min_element_size": 5,
-    "overlay_offset": 0
   }
 }
 ```
@@ -271,6 +267,8 @@ A recursive tree of UI elements. Each node has:
 - `isEditable` -- whether the element is a text input field
 - `isScrollable` -- whether the element supports scrolling (swipe gestures)
 - `children` -- nested child elements (the tree is recursive)
+
+Other boolean fields (`isEnabled`, `isVisibleToUser`, `isCheckable`, `isChecked`, `isFocused`, `isSelected`, `isPassword`) are available but rarely needed.
 
 **Example: reading a home screen**
 ```
@@ -600,6 +598,31 @@ Instead of controlling a phone step-by-step, you can submit a natural language g
 
 Tasks require a paid subscription with credits. If the user doesn't have an active plan, the API will return an error -- let them know they need a subscription at https://cloud.mobilerun.ai/billing. See [reference.md](./reference.md) for plan and credit details.
 
+### IMPORTANT: Always Break Goals Into Multiple Small Tasks
+
+**Never submit a user's goal as one big task.** Always break it into multiple small, focused sub-tasks of ~7-15 UI interactions each, and submit them all to the same device. They queue and run back-to-back automatically — there is zero overhead to splitting.
+
+This is critical because:
+- **Reliability** — smaller tasks succeed far more often. The agent gets lost or confused on long, multi-step tasks. A focused 5-step task almost always works; a 30-step task frequently fails.
+- **Checkpoints** — you can see the result of each sub-task before the next one starts, and cancel or adjust if something went wrong.
+- **Cost** — a failed 30-step task wastes all the credits. With small tasks, only the failed step is wasted.
+
+**The only exception** is when steps are so tightly coupled they cannot be separated — e.g. a multi-field form that must be filled and submitted in one go, or a login flow where each step depends on the previous. Everything else should be split.
+
+**How to decide what goes in one task vs. separate tasks:**
+- Can this step succeed on its own, without knowing the result of the previous step? → **Separate task**
+- Does this step require the previous step's output or screen state to even begin? → **Same task** (or dependent sub-task with `continueOnFailure: false`)
+- Is this a different app or a different area of the same app? → **Separate task**
+- Would you describe this as "and then also..." when explaining it? → **Separate task**
+
+### Task Queuing
+
+Only one task runs on a device at a time. When you submit a task while the device is already busy, it enters a `queued` state and waits. Once the running task finishes and the device is released, the next queued task is automatically promoted and dispatched -- no polling or manual intervention needed.
+
+This means you can submit multiple tasks to the same device in sequence and they will execute one after another in the order they were created.
+
+**`continueOnFailure`:** By default, if a task fails, all subsequent queued tasks for the same device are automatically cancelled. Set `continueOnFailure: true` on a task to keep it in the queue even if the task before it fails. Tasks with `continueOnFailure: false` (the default) that are ahead in the queue will be cancelled, and the first `continueOnFailure: true` task will be promoted next. **Use `continueOnFailure: true` on any sub-task that is independent of the ones before it.**
+
 ### Run a Task
 
 ```
@@ -628,14 +651,20 @@ Content-Type: application/json
 - `executionTimeout` -- timeout in seconds (default: 1000)
 - `outputSchema` -- JSON schema for structured output (nullable). Only use when the user explicitly asks for structured/formatted data. When set, the agent returns its result as a JSON object matching the schema in the task's `output` field.
 - `vpnCountry` -- route through VPN in a specific country: `US`, `BR`, `FR`, `DE`, `IN`, `JP`, `KR`, `ZA`. Only use if the task specifically requires a certain region. VPN adds latency -- avoid unless needed.
+- `continueOnFailure` -- if `true`, this task stays queued even if the previous task on the same device fails (default: `false`). See [Task Queuing](#task-queuing).
 
 Returns:
 ```json
 {
   "id": "uuid",
-  "streamUrl": "string"
+  "status": "queued",
+  "streamUrl": "string | null"
 }
 ```
+
+The response will almost always return `status: "queued"` -- even if the device is idle -- because promotion happens asynchronously after the response. This is normal. The task will transition to `created` and then `running` shortly after. Check `GET /tasks/{id}/status` to see the current state.
+
+- `streamUrl` -- device stream URL, or `null` when the task is queued (populated once the task is promoted and assigned to the device)
 
 ### Writing Task Prompts
 
@@ -654,46 +683,32 @@ You don't see the phone screen -- the agent on the device does. Write prompts th
 - Say what counts as success
 - Name the person, contact, or item to find
 
-**Examples by task type:**
-
-Simple action:
+**Single-task examples** (each of these is small enough to be one task):
 ```
 "Open the Settings app, go to Display, and enable Dark Mode"
-```
-
-Multi-step with messaging:
-```
 "Open WhatsApp, find the conversation with John Smith, and send: Running 10 minutes late, sorry!"
-```
-
-Information extraction:
-```
 "Open Chrome, go to amazon.com, search for 'wireless headphones', and report back the name and price of the top 3 results"
-```
-
-Form filling:
-```
-"Open Chrome, go to docs.google.com/forms/d/abc123, and fill in the form with: Name = Sarah Connor, Email = sarah@example.com, Department = Engineering. Then submit the form."
-```
-
-App configuration:
-```
 "Open Spotify, go to Settings, turn off Autoplay, set Audio Quality to Very High, and disable Canvas"
 ```
 
-Verification / checking:
-```
-"Open Gmail, check if there are any unread emails from support@stripe.com in the last 24 hours, and tell me the subject lines"
-```
+**Multi-task example — how to split a user request into queued sub-tasks:**
 
-Multi-app workflow:
-```
-"Open Google Maps, search for 'Italian restaurants near me', find the highest rated one that's currently open, then open Chrome and search for that restaurant's menu"
-```
+User asks: *"Check my email, check my calendar, and find me a good Italian restaurant nearby"*
 
-**Break down complex goals -- tell the agent what you want, not the steps:**
-- Bad: `"Order me an Uber to work"`
-- Good: `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming the ride so I can review the price"`
+Submit 3 tasks to the same device:
+1. `"Open Gmail and tell me the subjects and senders of unread emails from today"` (`continueOnFailure: true`)
+2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true`)
+3. `"Open Google Maps, search for 'Italian restaurants near me', and tell me the name, rating, and address of the top 3 results"` (`continueOnFailure: true`)
+
+All three are independent — each gets `continueOnFailure: true` so they all run regardless.
+
+**Multi-task example — dependent steps:**
+
+User asks: *"Order me an Uber to 123 Main Street"*
+
+Submit 2 tasks:
+1. `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming -- report back the estimated price and arrival time"`
+2. Only submit after reviewing the result of task 1 with the user — don't auto-confirm a purchase.
 
 **Include safety conditions when appropriate:**
 - `"If the app asks for login, stop and tell me"`
@@ -718,16 +733,17 @@ Use this to monitor task progress:
 }
 ```
 
+- **While queued:** `status` is `queued`, `lastResponse` is `null`. The task is waiting for the device to become free.
 - **While running:** `lastResponse` contains the agent's latest thinking, plan, and actions. Check this to understand what the agent is doing and where it's up to.
 - **When finished:** `status` is `completed` or `failed`, `message` has the final answer or failure reason, `succeeded` is `true`/`false`, `lastResponse` is `null`.
-- **Statuses:** `created`, `running`, `paused`, `completed`, `failed`, `cancelled`
+- **Statuses:** `queued`, `created`, `running`, `paused`, `completed`, `failed`, `cancelled`
 
-### Monitoring a Running Task
+### Monitoring a Task
 
 After creating a task, follow this pattern:
 
-1. **Immediately** tell the user the task is running (task ID, what it's doing).
-2. **After 5 seconds** -- do the first status check. This catches quick tasks and confirms the agent started.
+1. **Immediately** tell the user the task ID. The initial status is almost always `queued` — this is normal, not an error. The task will start shortly.
+2. **After 5 seconds** -- do the first status check. This catches quick tasks and confirms the agent started. If still `queued`, check every 15-30 seconds until it transitions to `running`.
 3. **After 30 seconds** -- check again if still running.
 4. **Subsequent checks** -- use your judgement on the interval based on:
    - **Task complexity** -- a simple "open Chrome" task finishes fast; a multi-app workflow takes longer, so space out checks accordingly.
@@ -765,6 +781,8 @@ Send instructions to steer a running agent task. Use this to correct the agent, 
 POST /tasks/{task_id}/cancel
 ```
 
+Works on both `queued` and `running` tasks. Queued tasks are cancelled instantly. Running tasks transition to `cancelling` and stop at the next step.
+
 ### Get Task Details
 
 ```
@@ -780,7 +798,7 @@ GET /tasks
 ```
 
 Query params:
-- `status` -- `created`, `running`, `paused`, `completed`, `failed`, `cancelled`
+- `status` -- `queued`, `created`, `running`, `paused`, `completed`, `failed`, `cancelled`
 - `orderBy` -- `id`, `createdAt`, `finishedAt`, `status` (default: `createdAt`)
 - `orderByDirection` -- `asc`, `desc` (default: `desc`)
 - `query` -- search in task description (max 128 chars)
@@ -906,20 +924,21 @@ You have **two approaches** -- choose based on the task:
 - When direct control isn't producing good results
 - **When managing multiple devices** -- always use tasks for multi-device scenarios. Direct control is sequential (one action at a time on one device), so controlling multiple devices by hand is too slow. Submit a task to each device and monitor them in parallel.
 
-**Breaking big goals into sub-tasks:**
-If a goal is too complex for a single task (many steps, multiple apps, high chance of failure), break it into smaller sequential sub-tasks:
+**Breaking goals into queued sub-tasks (default approach):**
+Always break user goals into smaller sub-tasks when the steps are independent or semi-independent. Each sub-task should be ~7-15 UI interactions. Submit them all at once to the same device -- they queue and execute in order automatically.
+
 1. Split the goal into clear, self-contained sub-goals
-2. Submit the first sub-task via `POST /tasks`
-3. Wait for it to complete, check the result
-4. If it succeeded, submit the next sub-task (the device is already in the right state from the previous task)
-5. Repeat until done
+2. Submit all sub-tasks via `POST /tasks` to the same device -- they queue automatically
+3. For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails
+4. For dependent sub-tasks (step 2 only makes sense if step 1 succeeded), leave `continueOnFailure: false` (default)
+5. Monitor progress via `GET /tasks/{id}/status` as each task runs and completes
 
-Example: "Order groceries from the Instacart app" could be:
+Example: "Order groceries from the Instacart app":
 1. `"Open Instacart and search for 'organic bananas', add the first result to cart"`
-2. `"Search for 'whole milk', add the first result to cart"`
-3. `"Go to cart and report back the total price -- do not checkout"`
+2. `"Search for 'whole milk', add the first result to cart"` (`continueOnFailure: true` -- independent of step 1)
+3. `"Go to cart and report back the total price -- do not checkout"` (`continueOnFailure: false` -- depends on items being in cart)
 
-This gives you checkpoints between steps, lets you steer or abort early, and keeps each task focused so the agent is less likely to get lost.
+You can also submit sub-tasks one at a time if you need to make decisions between steps based on the result.
 
 **Combining both approaches:**
 You can mix direct control and tasks in the same workflow:

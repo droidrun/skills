@@ -938,6 +938,12 @@ Example: "Order groceries from the Instacart app":
 2. `"Search for 'whole milk', add the first result to cart"` (`continueOnFailure: true` -- independent of step 1)
 3. `"Go to cart and report back the total price -- do not checkout"` (`continueOnFailure: false` -- depends on items being in cart)
 
+Example: "Check my email and my calendar":
+1. `"Open Gmail and tell me the subjects of unread emails from today"`
+2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true` -- completely independent)
+
+Only keep steps in a single task when they are tightly coupled (e.g. filling a form where all fields must be submitted together, or a login flow where each step depends on the previous).
+
 You can also submit sub-tasks one at a time if you need to make decisions between steps based on the result.
 
 **Combining both approaches:**

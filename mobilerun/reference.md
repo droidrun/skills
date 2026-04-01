@@ -1,9 +1,8 @@
 # Mobilerun Reference
 
-Read this document when helping with setup, connection issues, billing, webhooks, or the app library.
-For core API usage (phone control, tasks, device management), see [SKILL.md](./SKILL.md).
+Read this document when helping with setup, connection issues, billing, webhooks, app library, or Resources.
 
----
+For core API usage (phone control, tasks, device management), see [SKILL.md](./SKILL.md).
 
 ## Authentication
 
@@ -249,3 +248,67 @@ Content-Type: application/json
 POST /hooks/{hook_id}/unsubscribe
 ```
 
+---
+
+## Resources
+
+Use this section when the user asks where to find the main Droidrun and Mobilerun resources.
+
+### Framework GitHub
+
+The main Droidrun framework repository is:
+
+- **https://github.com/droidrun/droidrun**
+
+Use this when the user wants the core open-source framework.
+
+### Portal App
+
+The Droidrun Portal app repository is:
+
+- **https://github.com/droidrun/droidrun-portal**
+
+Use this when the user needs the Android Portal app or its GitHub releases page.
+
+### Cloud Dashboard
+
+The Mobilerun dashboard is:
+
+- **https://cloud.mobilerun.ai**
+
+Use this for login, API keys, billing, and account management.
+
+### API Docs
+
+The OpenAPI spec is:
+
+- **https://api.mobilerun.ai/v1/openapi.json**
+
+Use this when the user wants the raw API schema or API reference source.
+
+- **https://docs.mobilerun.ai/quickstart**
+
+Use this when the user wants the raw API schema or API reference source.
+
+### Discord
+
+The Droidrun community Discord invite is:
+
+- **https://discord.gg/kc2JYQfX2c**
+
+
+### Blog Posts
+
+DEV.to articles are published here:
+
+- **https://dev.to/priya_negi_9ffd29931ea408**
+
+Use this when the user asks for written guides, updates, or walkthroughs.
+
+### YouTube
+
+Demo videos and channel content are here:
+
+- **https://www.youtube.com/@droidrun**
+
+Use this when the user asks for video demos or walkthroughs.

@@ -979,3 +979,5 @@ All API errors follow this format:
 | Device `disconnected` | Portal app closed or phone lost network | Ask user to check phone and reopen Portal |
 | Billing/plan error on `POST /devices` | Free plan, cloud devices need subscription | Tell user to check plans at https://cloud.mobilerun.ai/billing |
 | Action fails on valid device | Device may be busy, locked, or unresponsive | Try taking a screenshot first to check state |
+
+If the user asks for any references, resources, or the Discord/community links, read [reference.md](./reference.md).

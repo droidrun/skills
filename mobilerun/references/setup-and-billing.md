@@ -310,7 +310,7 @@ Use this when the user asks for video demos or walkthroughs.
 
 The ClawMobile paper references DroidRun:
 
-- **https://arxiv.org/abs/2504.09689**
+- **https://arxiv.org/html/2602.22942**
 
 Use this when the user asks about research, academic references, or the technical foundation behind the framework.
 
@@ -318,6 +318,5 @@ Use this when the user asks about research, academic references, or the technica
 
 Droidrun is actively maintained and published across multiple ecosystems:
 
-- **Rust crate:** https://crates.io/crates/droidrun
 - **Python package:** https://pypi.org/project/droidrun/
-- **OpenClaw skill:** https://clawhub.dev/skills/mobilerun
+- **OpenClaw skill:** https://clawhub.ai/johnmalek312/mobilerun

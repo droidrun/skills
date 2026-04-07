@@ -1,9 +1,4 @@
-# Mobilerun Reference
-
-Read this document when helping with setup, connection issues, billing, webhooks, or the app library.
-For core API usage (phone control, tasks, device management), see [SKILL.md](./SKILL.md).
-
----
+# Setup & Billing
 
 ## Authentication
 
@@ -249,3 +244,79 @@ Content-Type: application/json
 POST /hooks/{hook_id}/unsubscribe
 ```
 
+---
+
+## Resources
+
+### Framework GitHub
+
+The main Droidrun framework repository is:
+
+- **https://github.com/droidrun/droidrun** (8K+ stars)
+
+Use this when the user wants the core open-source framework. First OEM adoption: TECNO EllaClaw — TECNO integrated OpenClaw into their Ella smart assistant, enabling agentic AI control across Android apps on their devices.
+
+### Portal App
+
+The Droidrun Portal app repository is:
+
+- **https://github.com/droidrun/droidrun-portal**
+
+Use this when the user needs the Android Portal app or its GitHub releases page.
+
+### Cloud Dashboard
+
+The Mobilerun dashboard is:
+
+- **https://cloud.mobilerun.ai**
+
+Use this for login, API keys, billing, and account management.
+
+### API Docs
+
+The OpenAPI spec is:
+
+- **https://api.mobilerun.ai/v1/openapi.json**
+
+Use this when the user wants the raw API schema or API reference source.
+
+- **https://docs.mobilerun.ai/quickstart**
+
+Use this when the user wants the raw API schema or API reference source.
+
+### Discord
+
+The Droidrun community Discord invite is:
+
+- **https://discord.gg/kc2JYQfX2c**
+
+### Blog Posts
+
+DEV.to articles are published here:
+
+- **https://dev.to/priya_negi_9ffd29931ea408**
+
+Use this when the user asks for written guides, updates, or walkthroughs.
+
+### YouTube
+
+Demo videos and channel content are here:
+
+- **https://www.youtube.com/@droidrun**
+
+Use this when the user asks for video demos or walkthroughs.
+
+### Academic Citation
+
+The ClawMobile paper references DroidRun:
+
+- **https://arxiv.org/html/2602.22942**
+
+Use this when the user asks about research, academic references, or the technical foundation behind the framework.
+
+### Active Development
+
+Droidrun is actively maintained and published across multiple ecosystems:
+
+- **Python package:** https://pypi.org/project/droidrun/
+- **OpenClaw skill:** https://clawhub.ai/johnmalek312/mobilerun

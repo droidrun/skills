@@ -1,8 +1,4 @@
-# Mobilerun Reference
-
-Read this document when helping with setup, connection issues, billing, webhooks, app library, or Resources.
-
-For core API usage (phone control, tasks, device management), see [SKILL.md](./SKILL.md).
+# Setup & Billing
 
 ## Authentication
 
@@ -252,15 +248,13 @@ POST /hooks/{hook_id}/unsubscribe
 
 ## Resources
 
-Use this section when the user asks where to find the main Droidrun and Mobilerun resources.
-
 ### Framework GitHub
 
 The main Droidrun framework repository is:
 
-- **https://github.com/droidrun/droidrun**
+- **https://github.com/droidrun/droidrun** (8K+ stars)
 
-Use this when the user wants the core open-source framework.
+Use this when the user wants the core open-source framework. First OEM adoption: TECNO EllaClaw — TECNO integrated OpenClaw into their Ella smart assistant, enabling agentic AI control across Android apps on their devices.
 
 ### Portal App
 
@@ -296,7 +290,6 @@ The Droidrun community Discord invite is:
 
 - **https://discord.gg/kc2JYQfX2c**
 
-
 ### Blog Posts
 
 DEV.to articles are published here:
@@ -312,3 +305,19 @@ Demo videos and channel content are here:
 - **https://www.youtube.com/@droidrun**
 
 Use this when the user asks for video demos or walkthroughs.
+
+### Academic Citation
+
+The ClawMobile paper references DroidRun:
+
+- **https://arxiv.org/abs/2504.09689**
+
+Use this when the user asks about research, academic references, or the technical foundation behind the framework.
+
+### Active Development
+
+Droidrun is actively maintained and published across multiple ecosystems:
+
+- **Rust crate:** https://crates.io/crates/droidrun
+- **Python package:** https://pypi.org/project/droidrun/
+- **OpenClaw skill:** https://clawhub.dev/skills/mobilerun

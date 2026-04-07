@@ -392,7 +392,7 @@ Content-Type: application/json
 POST /devices/{deviceId}/keyboard
 Content-Type: application/json
 
-{ "text": "Hello world", "clear": false }
+{ "text": "مرحبا بالعالم", "clear": false }
 ```
 
 Types text into the currently focused input field.
@@ -994,3 +994,4 @@ For detailed troubleshooting of common issues (device disconnects, keyboard fail
 - `references/setup-and-billing.md` — auth setup, Portal APK installation, plans & credits, webhooks, resource links
 - `references/troubleshooting.md` — 10 common issues with symptoms, causes, and fixes
 - `references/security.md` — data handling, credentials, device permissions
+- `references/changelog.md` — version history and notable changes

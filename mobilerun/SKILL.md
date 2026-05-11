@@ -382,94 +382,7 @@ If the count or bounds look wrong, re-fetch with a more specific filter before p
 
 All action endpoints take a `deviceId` path parameter.
 
-### Tap
-
-```
-POST /devices/{deviceId}/tap
-Content-Type: application/json
-
-{ "x": 540, "y": 960 }
-```
-
-Taps at pixel coordinates. Use the `screen_bounds` from UI state and element bounds from the a11y tree to calculate where to tap.
-
-### Swipe
-
-```
-POST /devices/{deviceId}/swipe
-Content-Type: application/json
-
-{
-  "startX": 540,
-  "startY": 1200,
-  "endX": 540,
-  "endY": 400,
-  "duration": 300
-}
-```
-
-`duration` is in milliseconds (minimum: 10). Common patterns:
-- **Scroll down**: swipe from bottom to top (high startY -> low endY)
-- **Scroll up**: swipe from top to bottom
-- **Swipe left/right**: adjust X coordinates, keep Y similar
-
-### Global Actions
-
-```
-POST /devices/{deviceId}/global
-Content-Type: application/json
-
-{ "action": 2 }
-```
-
-| Action code | Button  |
-|-------------|---------|
-| `1`         | BACK    |
-| `2`         | HOME    |
-| `3`         | RECENT  |
-
-### Type Text
-
-```
-POST /devices/{deviceId}/keyboard
-Content-Type: application/json
-
-{ "text": "Hello world", "clear": false }
-```
-
-Types text into the currently focused input field.
-- `clear: true` -- clears the field before typing
-- Make sure an input field is focused first (check `phone_state.isEditable`)
-- If the keyboard isn't visible, you may need to tap on an input field first
-
-### Press Key
-
-```
-PUT /devices/{deviceId}/keyboard
-Content-Type: application/json
-
-{ "key": 66 }
-```
-
-Sends an Android keycode. Only text-input-related keycodes are supported.
-
-| Keycode | Key |
-|---------|-----|
-| `4`   | BACK |
-| `61`  | TAB |
-| `66`  | ENTER |
-| `67`  | DEL (backspace) |
-| `112` | FORWARD_DEL (delete) |
-
-For system navigation (home, back, recent), use `POST /devices/{id}/global` instead.
-
-### Clear Input
-
-```
-DELETE /devices/{deviceId}/keyboard
-```
-
-Clears the currently focused input field.
+**Important:** Do not use device action APIs (tap, swipe, type, keyboard, global actions) to interact with the phone UI directly. If a task requires phone interaction, submit it to DroidAgent via `POST /tasks` and let it handle the UI automation. OpenClaw's role is orchestration — use direct APIs for observation and configuration, delegate UI interaction to DroidAgent.
 
 ### Set Location
 
@@ -701,18 +614,6 @@ Takes a couple of minutes and there's no status endpoint -- you'd have to poll `
 **Prefer manually installing via Play Store instead.** Open the Play Store app on the device, search for the app, and tap install -- this is faster and more reliable. Only use this API endpoint if the user explicitly asks for it.
 
 > On personal devices, this endpoint may fail because Android blocks app installations from unknown sources by default.
-
-### Start App
-
-```
-PUT /devices/{deviceId}/apps/{packageName}
-Content-Type: application/json
-
-{}
-```
-
-Optional body: `{ "activity": "com.example.app.MainActivity" }` -- to launch a specific activity.
-Usually omitting activity is fine; it launches the default/main activity.
 
 ### Stop App
 
@@ -1489,42 +1390,9 @@ Content-Type: application/json
 **Data integrity — never fill gaps:**
 If extracted data is incomplete (truncated output, missing items, suspicious count), re-query with a better jq filter. Never infer or fabricate missing entries. If you cannot get a complete result after two attempts, tell the user what's missing and why before proceeding.
 
-**Observe-Act Loop:**
-Most phone control tasks follow this cycle:
-1. Take a screenshot and/or read the UI state
-2. Decide what action to perform
-3. Execute the action (tap, type, swipe, etc.)
-4. Observe again to verify the result
-5. Repeat
-
-**Finding tap coordinates:**
-Use `GET /devices/{id}/ui-state?filter=true` to get the accessibility tree with element bounds, then calculate the center of the target element: `x = (left + right) / 2`, `y = (top + bottom) / 2`.
-
-**When an action doesn't work:**
-- Take a screenshot and re-read the UI state -- the screen may have changed or your tap coordinates may have been off.
-- If an element isn't visible, try scrolling (swipe up/down) to reveal it.
-- If a tap didn't register, recalculate coordinates from the latest UI state and try again.
-- If the app is unresponsive, try pressing HOME and reopening the app.
-- If you're stuck after 2-3 attempts, tell the user what's happening and ask how to proceed.
-
-**Typing into a field:**
-1. Check `phone_state.isEditable` -- if false, tap the input field first
-2. Optionally clear existing text with `clear: true`
-3. Send the text via `POST /devices/{id}/keyboard`
-
-## Two Ways to Control a Device
-
-You have **two approaches** -- choose based on the task:
-
-1. **Direct control** -- You drive the device step-by-step: screenshot, tap, swipe, type. Best for simple, quick actions on a single device.
-
-2. **Mobilerun Agent** -- Submit a natural language goal via `POST /tasks` and the agent executes it autonomously. Best for complex or multi-step tasks. Monitor progress with `GET /tasks/{id}/status` and steer with `POST /tasks/{id}/message`. Requires credits (paid plan).
-
-**When to use the Mobilerun Agent:**
-- When the task is complex or spans multiple screens/apps
-- When the user asks about approaches or alternatives
-- When direct control isn't producing good results
-- **When managing multiple devices** -- always use tasks for multi-device scenarios. Direct control is sequential (one action at a time on one device), so controlling multiple devices by hand is too slow. Submit a task to each device and monitor them in parallel.
+**How to decide: direct API vs DroidAgent:**
+- If a direct API endpoint gives you the answer (e.g. `GET /devices/{id}/time`, `GET /devices/{id}/apps`) → use it. One call, done.
+- If the task requires phone UI interaction (tapping, swiping, typing, navigating apps) → submit it to DroidAgent via `POST /tasks`. Never drive the phone UI yourself.
 
 **Breaking goals into queued sub-tasks (default approach):**
 Always break user goals into smaller sub-tasks when the steps are independent or semi-independent. Each sub-task should be ~7-15 UI interactions. Submit them all at once to the same device -- they queue and execute in order automatically.
@@ -1548,11 +1416,11 @@ Only keep steps in a single task when they are tightly coupled (e.g. filling a f
 
 You can also submit sub-tasks one at a time if you need to make decisions between steps based on the result.
 
-**Combining both approaches:**
-You can mix direct control and tasks in the same workflow:
-- Use direct control to quickly set something up (open the right app, navigate to a screen), then launch a task for the complex part.
-- Let a task do the heavy lifting, then use direct control for a precise final action (e.g. verify a specific element on screen).
-- Use direct control for a quick check (screenshot to see what's on screen), then decide whether to handle it manually or submit a task.
+**When a task fails or the agent seems stuck:**
+- Take a screenshot (`GET /devices/{id}/screenshot`) to see what's on screen.
+- Send a message via `POST /tasks/{id}/message` to nudge the agent.
+- If an app is frozen, force-stop it via `PATCH /devices/{id}/apps/{packageName}` and resubmit the task.
+- Let the user know and ask if they want to steer it or cancel.
 
 Only suggest tools and approaches available through this skill -- do not recommend external tools like ADB, scrcpy, Appium, Tasker, etc.
 

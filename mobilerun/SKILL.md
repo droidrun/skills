@@ -5,6 +5,8 @@ description: >
   or mobile device. This includes: tapping, swiping, typing, taking screenshots, reading
   the screen, managing apps, running AI agent tasks on a phone, or any form of phone/mobile
   automation. Also load when the user mentions Mobilerun, Droidrun, or phone control.
+  Also load when the user talks about multiple devices, managing a fleet of phones,
+  renaming devices, running tasks across several devices, or any multi-device operation.
   Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---

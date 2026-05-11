@@ -11,7 +11,9 @@ metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "r
 
 # Mobilerun
 
-Mobilerun turns your Android phone into a tool that AI can control. Instead of manually tapping through apps, you connect your phone and let an AI agent do it for you -- navigate apps, fill out forms, extract information, automate repetitive tasks, or anything else you'd normally do by hand. It works with your own personal device through a simple app called Droidrun Portal, and everything happens through a straightforward API: take screenshots to see the screen, read the UI tree to understand what's on it, then tap, swipe, and type to interact. No rooting, no emulators, just your real phone controlled remotely.
+Mobilerun is a cloud platform for controlling Android devices. You are the **orchestrator** -- you manage devices, read their state, and delegate phone interaction to DroidAgent (the on-device AI agent) via `POST /tasks`.
+
+**CRITICAL RULE: You do NOT have tap, swipe, type, keyboard, or global action APIs. These endpoints do not exist in this skill. Any phone UI interaction (opening apps, tapping buttons, typing text, scrolling, navigating) MUST be delegated to DroidAgent by submitting a task via `POST /tasks`. You only use direct API calls for observation (screenshots, UI state) and device management (provisioning, files, location, proxy, etc.).**
 
 Base URL: `https://api.mobilerun.ai/v1`
 Auth: `Authorization: Bearer <MOBILERUN_API_KEY>`

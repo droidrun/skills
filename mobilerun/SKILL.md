@@ -507,7 +507,7 @@ Content-Type: application/json
 
 ### File Transfer
 
-The `path` query param specifies the file path on the device.
+The `path` query param specifies the file path on the device. Use `/` as the root path to list top-level directories (Download, DCIM, Documents, etc.) — `/sdcard` does not resolve on most devices.
 
 ```
 GET /devices/{deviceId}/files?path=/sdcard/Download
@@ -569,7 +569,7 @@ Disconnects any active proxy from the device.
 
 ### eSIM
 
-Manage eSIM subscriptions on devices. Requires a cloud device with eSIM support.
+Manage eSIM subscriptions on devices. Requires an active eSIM subscription -- you need to download an eSIM profile first via `POST /devices/{id}/esim` with credentials from an eSIM provider before list/status/APN endpoints return data.
 
 ```
 GET /devices/{deviceId}/esim
@@ -682,7 +682,7 @@ Returns an array of `AppInfo`:
 GET /devices/{deviceId}/packages
 ```
 
-Query param: `includeSystemPackages` (default: `false`)
+Query param: `includeSystemPackages` (default: `false`) -- on premium/physical devices, only returns results when `includeSystemPackages=true`.
 
 Returns a string array of package names. Lighter than the full app list.
 

@@ -201,6 +201,16 @@ Content-Type: application/json
 { "name": "my-test-phone" }
 ```
 
+### Reboot a Device
+
+> Physical Phones and Personal Phones only. Not available on Cloud Phones.
+
+```
+POST /devices/{deviceId}/reboot
+```
+
+Reboots the device. The device will be temporarily unavailable during reboot.
+
 ---
 
 ## Screen Observation
@@ -469,6 +479,94 @@ DELETE /devices/{deviceId}/proxy
 ```
 
 Disconnects any active proxy from the device.
+
+### eSIM
+
+> Physical Phones and Personal Phones only. Not available on Cloud Phones.
+
+Manage eSIM subscriptions on devices. Requires an eSIM provider — you need to download an eSIM profile first before list/status/APN endpoints return data.
+
+```
+GET /devices/{deviceId}/esim
+```
+
+Lists all eSIM subscriptions on the device.
+
+```
+POST /devices/{deviceId}/esim
+Content-Type: application/json
+
+{
+  "smDpAddr": "smdp.example.com",
+  "matchingId": "ABCD-1234-EFGH",
+  "enable": true
+}
+```
+
+Downloads an eSIM profile and optionally enables it. All three fields are required.
+
+```
+PUT /devices/{deviceId}/esim
+Content-Type: application/json
+
+{ "subId": 2 }
+```
+
+Enables a previously downloaded eSIM subscription by its subscription ID.
+
+```
+DELETE /devices/{deviceId}/esim?subId=2
+```
+
+Deletes an eSIM subscription. `subId` is a required query param.
+
+```
+GET /devices/{deviceId}/esim/status
+```
+
+Returns current eSIM connectivity information.
+
+```
+GET /devices/{deviceId}/esim/apn
+```
+
+Lists APN configurations for active eSIM subscriptions.
+
+```
+POST /devices/{deviceId}/esim/apn
+Content-Type: application/json
+
+{
+  "name": "My APN",
+  "apn": "internet",
+  "mcc": "310",
+  "mnc": "260",
+  "protocol": "IPV4V6",
+  "roamingProtocol": "IPV4V6",
+  "type": "default,supl",
+  "subId": 2
+}
+```
+
+Creates and sets an APN. All fields are required.
+
+```
+PUT /devices/{deviceId}/esim/apn
+Content-Type: application/json
+
+{ "apnId": 1, "subId": 2 }
+```
+
+Selects an existing APN as preferred.
+
+```
+PUT /devices/{deviceId}/esim/roaming
+Content-Type: application/json
+
+{ "enabled": true }
+```
+
+Toggles eSIM data roaming.
 
 ---
 
@@ -976,7 +1074,6 @@ DELETE /credentials/packages/{packageName}/credentials/{credentialName}/fields/{
 The following features are managed through the Mobilerun dashboard at https://cloud.mobilerun.ai and are not available via the API:
 
 - **Proxy Configs** — saved SOCKS5 proxy configurations. A proxy must be configured before provisioning Cloud or Physical Phones. Manage at the Proxies tab in the dashboard.
-- **eSIM** — cellular connectivity for Physical Phones and Personal Phones. Configure eSIM profiles through the device's eSIM section in the dashboard.
 
 If the user asks about any of these, direct them to the dashboard.
 

@@ -1296,4 +1296,3 @@ For detailed troubleshooting of common issues (device disconnects, keyboard fail
 ## References
 
 - `reference.md` — auth setup, Portal APK installation, plans & credits, webhooks, resource links
-- `security.md` — data handling, credentials, device permissions

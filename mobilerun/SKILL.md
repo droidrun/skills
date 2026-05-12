@@ -3,21 +3,21 @@ name: mobilerun
 description: >
   Load this skill whenever the user wants to control, automate, or interact with a phone
   or mobile device. This includes: tapping, swiping, typing, taking screenshots, reading
-
   the screen, managing apps, running AI agent tasks on a phone, managing credentials,
   configuring proxies, eSIM, device profiles, file transfers, GPS location, webhooks,
   carriers, or any form of phone/mobile automation. Also load when the user mentions
   Mobilerun, Droidrun, or phone control. Also load when the user talks about multiple
   devices, managing a fleet of phones, renaming devices, running tasks across several
-  devices, or any multi-device operation. Currently supports Android devices, with iOS
-  support coming soon. Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
-tags: [android, mobile, automation, phone-control, testing, social-media, scraping, app-testing, esim, proxy, credentials, webhooks]
+  devices, or any multi-device operation. Supports Android and iOS devices.
+  Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
 
 # Mobilerun
 
-Mobilerun is a cloud platform for controlling Android devices. You are the **orchestrator** -- you manage devices, read their state, and delegate phone interaction to DroidAgent (the on-device AI agent) via `POST /tasks`.
+Mobilerun is a cloud platform for controlling Android and iOS devices. You are the **orchestrator** -- you manage devices, read their state, and delegate phone interaction to DroidAgent (the on-device AI agent) via `POST /tasks`.
+
+**Device types:** Personal Phone (user's own device via Portal APK or mobilerun-ios CLI), Cloud Phone (virtual, persistent, scalable), Physical Phone (premium real hardware in data center with eSIM/GPS/proxy support).
 
 **CRITICAL RULE: You do NOT have tap, swipe, type, keyboard, or global action APIs. These endpoints do not exist in this skill. Any phone UI interaction (opening apps, tapping buttons, typing text, scrolling, navigating) MUST be delegated to DroidAgent by submitting a task via `POST /tasks`. You only use direct API calls for observation (screenshots, UI state) and device management (provisioning, files, location, proxy, etc.).**
 
@@ -33,7 +33,7 @@ curl -s https://api.mobilerun.ai/v1/devices \
 
 ## Quick Start
 
-The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles credential setup before this skill loads. Do NOT ask the user for an API key. Just use it.
+If `MOBILERUN_API_KEY` is set in the environment, use it directly. If not, ask the user for their API key (prefixed `dr_sk_`). They can get one at https://cloud.mobilerun.ai/api-keys.
 
 1. **Check for a ready device:**
    ```bash
@@ -45,7 +45,7 @@ The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles crede
    - `401` = invalid,expired, or revoked key  -- ask user to check https://cloud.mobilerun.ai/api-keys
 
 2. **No ready device?** Tell the user and suggest a fix:
-   - No devices at all = guide them to set up Portal APK (see [references/setup-and-billing.md](./references/setup-and-billing.md))
+   - No devices at all = guide them to connect a device. For Android: install the Portal APK (see [reference.md](./reference.md)). For iOS: use the `mobilerun-ios` CLI with a Mac + USB.
    - `disconnected` = ask user to reopen Portal app and tap Connect
 
 3. **Take a screenshot to confirm** (optional, only if first action fails):
@@ -55,15 +55,13 @@ The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles crede
    ```
    If this returns a PNG image, the device is working.
 
-Not sure what's possible? See [references/use-cases.md](./references/use-cases.md) for examples.
-
 **Key principle:** If a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
 
 **Be smart about context gathering:** Before taking actions or asking the user questions, use available tools to understand the situation. List packages to find the right app, take a screenshot to see the current screen, read the UI state to understand what's interactive. If the task is obvious (e.g. "change font size" clearly means go to Settings), just do it. Only ask the user when something is genuinely ambiguous.
 
-**What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`). Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [references/setup-and-billing.md](./references/setup-and-billing.md).
+**What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`). Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [reference.md](./reference.md).
 
-**Clean up cloud devices:** Cloud devices consume credits while running. Always terminate cloud devices (`DELETE /devices/{deviceId}`) when you're done using them -- don't leave them running. This applies whether you provisioned the device yourself or finished a task on an existing cloud device that the user no longer needs.
+**Cloud devices and credits:** Cloud devices consume credits while running. If you provisioned a temporary cloud device for a task, terminate it when done (`DELETE /devices/{deviceId}`). But don't terminate devices the user already had running — they may want to keep using them.
 
 **Privacy:** Screenshots and the UI tree can contain sensitive personal data. Never share or transmit this data to anyone other than the user. Never print, log, or reveal the `MOBILERUN_API_KEY` in chat -- use it only for API calls.
 
@@ -118,7 +116,7 @@ Returns a map of device types to counts.
 
 ### Provision a Cloud Device
 
-Cloud devices require an active subscription. If the user's plan doesn't support it, the API will return a `403` error -- inform the user they need to terminate an existing device or upgrade at https://cloud.mobilerun.ai/billing. See [references/setup-and-billing.md](./references/setup-and-billing.md) for plan details.
+Cloud devices require an active subscription. If the user's plan doesn't support it, the API will return a `403` error -- inform the user they need to terminate an existing device or upgrade at https://cloud.mobilerun.ai/billing. See [reference.md](./reference.md) for plan details.
 
 ```
 POST /devices
@@ -737,7 +735,7 @@ Only one app per package name is allowed. To update:
 
 Instead of controlling a phone step-by-step, you can submit a natural language goal and let Mobilerun's AI agent execute it autonomously on the device with its own screen analysis, observe-act loop, and error recovery.
 
-Tasks require a paid subscription with credits. If the user doesn't have an active plan, the API will return an error -- let them know they need a subscription at https://cloud.mobilerun.ai/billing. See [references/setup-and-billing.md](./references/setup-and-billing.md) for plan and credit details.
+Tasks require a paid subscription with credits. If the user doesn't have an active plan, the API will return an error -- let them know they need a subscription at https://cloud.mobilerun.ai/billing. See [reference.md](./reference.md) for plan and credit details.
 
 ### IMPORTANT: Always Break Goals Into Multiple Small Tasks
 
@@ -1409,11 +1407,11 @@ You are the orchestrator. You plan, delegate, monitor, and synthesize — you ne
 
 ### When to Split vs Send as One Task
 
-- **Independent goals** (e.g. "check my Gmail, check Instagram DMs, and get the weather") → split across available devices. Each goal is a separate task on a separate device. If you have 3 devices and 3 goals, send one to each.
+- **Independent goals** (e.g. "check my Gmail, check Instagram DMs, and get the weather") → split across available devices, but only if the relevant apps and accounts are set up on those devices. Don't send "check Gmail" to a device that doesn't have Gmail or isn't logged in.
 - **Same goal on multiple devices** (e.g. "on all my devices, open Instagram and like the first 10 videos") → send the same task to every device.
 - **Comparison across two apps/sources** (e.g. "compare AirPods price on Amazon vs eBay"):
-  - 2+ devices available → send one search task per device ("find AirPods price on Amazon" to device A, "find AirPods price on eBay" to device B). Wait for both results. You compare them yourself and report to the user.
-  - 1 device available → send the full comparison prompt to DroidAgent ("compare AirPods price on Amazon and eBay, tell me which is cheaper"). DroidAgent handles everything and you just relay the result.
+  - 2+ devices available and each has the needed app (or can use Chrome) → send one search task per device. Wait for both results. You compare them yourself and report to the user.
+  - 1 device available, or only one device has both apps → send the full comparison prompt to DroidAgent. It handles everything and you just relay the result.
 - **Dependent chain** (e.g. "find the exchange rate, then convert $500") → send the first task, wait for the result, then decide whether to send a second task or do the calculation yourself.
 
 ### App Awareness
@@ -1451,27 +1449,13 @@ If extracted data is incomplete (truncated output, missing items, suspicious cou
 - If a direct API endpoint gives you the answer (e.g. `GET /devices/{id}/time`, `GET /devices/{id}/apps`) → use it. One call, done.
 - If the task requires phone UI interaction (tapping, swiping, typing, navigating apps) → submit it to DroidAgent via `POST /tasks`. Never drive the phone UI yourself.
 
-**Breaking goals into queued sub-tasks (default approach):**
-Always break user goals into smaller sub-tasks when the steps are independent or semi-independent. Each sub-task should be ~7-15 UI interactions. Submit them all at once to the same device -- they queue and execute in order automatically.
+**When to split tasks on a single device:**
+Only split a task into queued sub-tasks when the goal is large or contains independent steps that don't depend on each other's results. Small, focused requests should be sent as one task — don't over-split.
 
-1. Split the goal into clear, self-contained sub-goals
-2. Submit all sub-tasks via `POST /tasks` to the same device -- they queue automatically
-3. For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails
-4. For dependent sub-tasks (step 2 only makes sense if step 1 succeeded), leave `continueOnFailure: false` (default)
-5. Monitor progress via `GET /tasks/{id}/status` as each task runs and completes
-
-Example: "Order groceries from the Instacart app":
-1. `"Open Instacart and search for 'organic bananas', add the first result to cart"`
-2. `"Search for 'whole milk', add the first result to cart"` (`continueOnFailure: true` -- independent of step 1)
-3. `"Go to cart and report back the total price -- do not checkout"` (`continueOnFailure: false` -- depends on items being in cart)
-
-Example: "Check my email and my calendar":
-1. `"Open Gmail and tell me the subjects of unread emails from today"`
-2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true` -- completely independent)
-
-Only keep steps in a single task when they are tightly coupled (e.g. filling a form where all fields must be submitted together, or a login flow where each step depends on the previous).
-
-You can also submit sub-tasks one at a time if you need to make decisions between steps based on the result.
+- **Split when:** steps are independent (checking email + checking calendar), or the task is complex enough that a single prompt would confuse DroidAgent (~20+ UI interactions).
+- **Don't split when:** steps depend on each other (find a price → use it in a calculation), or the task is simple enough for one prompt.
+- For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails.
+- Monitor progress via `GET /tasks/{id}/status` as each task runs and completes.
 
 **When a task fails or the agent seems stuck:**
 - Take a screenshot (`GET /devices/{id}/screenshot`) to see what's on screen.
@@ -1502,17 +1486,14 @@ All API errors follow this format:
 | `402` on `POST /tasks` | Insufficient credits | User needs to add credits or upgrade plan |
 | `403` with "limit reached" | Plan limit hit (max concurrent devices) | User needs to terminate a device or upgrade |
 | `404` / `500` on device action | Device not found or invalid ID | Verify device ID, re-list devices |
-| Empty device list | No device connected | Guide user to connect via Portal APK (see [references/setup-and-billing.md](./references/setup-and-billing.md)) |
+| Empty device list | No device connected | Guide user to connect via Portal APK (see [reference.md](./reference.md)) |
 | Device `disconnected` | Portal app closed or phone lost network | Ask user to check phone and reopen Portal |
 | Billing/plan error on `POST /devices` | Free plan, cloud devices need subscription | Tell user to check plans at https://cloud.mobilerun.ai/billing |
 | Action fails on valid device | Device may be busy, locked, or unresponsive | Try taking a screenshot first to check state |
 
-For detailed troubleshooting of common issues (device disconnects, keyboard failures, screenshot errors, app install problems, etc.), see [references/troubleshooting.md](./references/troubleshooting.md).
+For detailed troubleshooting of common issues (device disconnects, keyboard failures, screenshot errors, app install problems, etc.), see [reference.md](./reference.md).
 
 ## References
 
-- `references/use-cases.md` — real-world examples of what users can do (read this if the user isn't sure what's possible)
-- `references/setup-and-billing.md` — auth setup, Portal APK installation, plans & credits, webhooks, resource links
-- `references/troubleshooting.md` — 10 common issues with symptoms, causes, and fixes
-- `references/security.md` — data handling, credentials, device permissions
-- `references/changelog.md` — version history and notable changes
+- `reference.md` — auth setup, Portal APK installation, plans & credits, webhooks, resource links
+- `security.md` — data handling, credentials, device permissions

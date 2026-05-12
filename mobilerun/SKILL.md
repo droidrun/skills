@@ -1074,10 +1074,8 @@ DELETE /credentials/packages/{packageName}/credentials/{credentialName}/fields/{
 
 The following features are managed through the Mobilerun dashboard at https://cloud.mobilerun.ai and are not available via the API:
 
-- **Profiles** — device specification presets (hardware, locale). Create and manage at the Proxies tab. Cloud Phones only.
-- **Proxy Configs** — saved SOCKS5 proxy configurations. A proxy must be configured before provisioning Cloud or Physical Phones. Manage at the Proxies tab.
-- **Carriers** — mobile carrier configurations for eSIM.
-- **eSIM** — cellular connectivity for Physical Phones. Configure eSIM profiles through the device's eSIM section in the dashboard.
+- **Proxy Configs** — saved SOCKS5 proxy configurations. A proxy must be configured before provisioning Cloud or Physical Phones. Manage at the Proxies tab in the dashboard.
+- **eSIM** — cellular connectivity for Physical Phones and Personal Phones. Configure eSIM profiles through the device's eSIM section in the dashboard.
 
 If the user asks about any of these, direct them to the dashboard.
 

@@ -922,28 +922,6 @@ POST /tasks/{task_id}/cancel
 
 Works on both `queued` and `running` tasks. Queued tasks are cancelled instantly. Running tasks transition to `cancelling` and stop at the next step.
 
-### Run a Streamed Task
-
-```
-POST /tasks/stream
-Content-Type: application/json
-
-{
-  "task": "Open Chrome and search for weather",
-  "deviceId": "uuid-of-device"
-}
-```
-
-Same body as `POST /tasks`, but returns an SSE (Server-Sent Events) stream of task events in real-time instead of a task ID. The task is automatically cancelled if the client disconnects. Use this when you want to follow task execution live without polling.
-
-### Attach to a Running Task
-
-```
-GET /tasks/{task_id}/attach
-```
-
-Attaches to a running task and receives its events as an SSE stream. Use this to follow an already-running task in real time.
-
 ### Get Task Details
 
 ```

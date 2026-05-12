@@ -1488,7 +1488,7 @@ All API errors follow this format:
 | `404` / `500` on device action | Device not found or invalid ID | Verify device ID, re-list devices |
 | Empty device list | No device connected | Guide user to connect via Portal APK (see [reference.md](./reference.md)) |
 | Device `disconnected` | Portal app closed or phone lost network | Ask user to check phone and reopen Portal |
-| Billing/plan error on `POST /devices` | Free plan, cloud devices need subscription | Tell user to check plans at https://cloud.mobilerun.ai/billing |
+| Billing/plan error on `POST /devices` | No device subscription | Tell user to add a device at https://cloud.mobilerun.ai/billing |
 | Action fails on valid device | Device may be busy, locked, or unresponsive | Try taking a screenshot first to check state |
 
 For detailed troubleshooting of common issues (device disconnects, keyboard failures, screenshot errors, app install problems, etc.), see [reference.md](./reference.md).

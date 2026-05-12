@@ -5,15 +5,18 @@ description: >
   or mobile device. This includes: tapping, swiping, typing, taking screenshots, reading
   the screen, managing apps, running AI agent tasks on a phone, or any form of phone/mobile
   automation. Also load when the user mentions Mobilerun, Droidrun, or phone control.
-  Currently supports Android devices, with iOS support coming soon.
+  Also load when the user talks about multiple devices, managing a fleet of phones,
+  renaming devices, running tasks across several devices, or any multi-device operation.
+  Supports Android and iOS devices.
   Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
-tags: [android, mobile, automation, phone-control, testing, social-media, scraping, app-testing]
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
 
 # Mobilerun
 
-The hosted mobile cloud platform. Grant AI native control of Android devices to tap, swipe, type, navigate apps, fill out forms, extract data, automate workflows, and run QA. Connect your own phone, spin up on-demand virtual devices, or use always-on emulated and physical devices in the cloud. iOS support coming soon.
+The hosted mobile cloud platform. Grant AI native control of Android and iOS devices to tap, swipe, type, navigate apps, fill out forms, extract data, automate workflows, and run QA. Connect your own phone, spin up on-demand virtual devices, or use always-on emulated and physical devices in the cloud.
+
+**Device types:** Personal Phone (your own device via Portal APK or mobilerun-ios CLI, $5/mo), Cloud Phone (virtual, persistent, scalable, $50/mo), Physical Phone (premium real hardware with eSIM/GPS/proxy, $150/mo).
 
 Base URL: `https://api.mobilerun.ai/v1`
 Auth: `Authorization: Bearer <MOBILERUN_API_KEY>`
@@ -27,7 +30,7 @@ curl -s https://api.mobilerun.ai/v1/devices \
 
 ## Quick Start
 
-The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles credential setup before this skill loads. Do NOT ask the user for an API key. Just use it.
+If `MOBILERUN_API_KEY` is set in the environment, use it directly. If not, ask the user for their API key (prefixed `dr_sk_`). They can get one at https://cloud.mobilerun.ai/api-keys.
 
 1. **Check for a ready device:**
    ```bash
@@ -39,7 +42,7 @@ The API key (`MOBILERUN_API_KEY`) is already available -- OpenClaw handles crede
    - `401` = invalid,expired, or revoked key  -- ask user to check https://cloud.mobilerun.ai/api-keys
 
 2. **No ready device?** Tell the user and suggest a fix:
-   - No devices at all = guide them to set up Portal APK (see [references/setup-and-billing.md](./references/setup-and-billing.md))
+   - No devices at all = guide them to connect a device. For Android: install the Portal APK (see [references/setup-and-billing.md](./references/setup-and-billing.md)). For iOS: use the `mobilerun-ios` CLI with a Mac + USB.
    - `disconnected` = ask user to reopen Portal app and tap Connect
 
 3. **Take a screenshot to confirm** (optional, only if first action fails):
@@ -168,6 +171,53 @@ GET /devices/{deviceId}/time
 ```
 
 Returns the current time on the device as a string.
+
+### Get Device Timezone
+
+```
+GET /devices/{deviceId}/timezone
+```
+
+Returns the current timezone of the device (e.g. `America/New_York`).
+
+### Set Device Timezone
+
+```
+POST /devices/{deviceId}/timezone
+Content-Type: application/json
+
+{ "timezone": "Europe/Berlin" }
+```
+
+Sets the device timezone. Use standard IANA timezone identifiers.
+
+### Rename a Device
+
+```
+PUT /devices/{deviceId}/name
+Content-Type: application/json
+
+{ "name": "my-test-phone" }
+```
+
+### Reboot a Device
+
+```
+POST /devices/{deviceId}/reboot
+```
+
+Reboots the device. The device will temporarily become unavailable during reboot.
+
+### Apply Profile to a Device
+
+```
+PUT /devices/{deviceId}/profile
+Content-Type: application/json
+
+{ "profileId": "uuid-of-profile" }
+```
+
+Applies a saved profile's device specification to the device. See [Profiles](#profiles) for managing profile configurations.
 
 ---
 
@@ -429,6 +479,188 @@ DELETE /devices/{deviceId}/keyboard
 ```
 
 Clears the currently focused input field.
+
+### Set Location
+
+```
+POST /devices/{deviceId}/location
+Content-Type: application/json
+
+{ "latitude": 37.7749, "longitude": -122.4194 }
+```
+
+Sets a mock GPS location on the device. Both `latitude` and `longitude` are required.
+
+### Get Location
+
+```
+GET /devices/{deviceId}/location
+```
+
+Returns the current GPS coordinates of the device.
+
+### Overlay Visibility
+
+```
+GET /devices/{deviceId}/overlay
+```
+
+Returns whether the Mobilerun overlay is currently visible on the device screen.
+
+```
+POST /devices/{deviceId}/overlay
+Content-Type: application/json
+
+{ "visible": false }
+```
+
+### File Transfer
+
+The `path` query param specifies the file path on the device. Use `/` as the root path to list top-level directories (Download, DCIM, Documents, etc.) — `/sdcard` does not resolve on most devices.
+
+```
+GET /devices/{deviceId}/files?path=/sdcard/Download
+```
+
+Lists files at the specified path.
+
+```
+POST /devices/{deviceId}/files?path=/sdcard/Download/myfile.txt
+```
+
+Uploads a file to the specified path. Send the file content as the request body.
+
+```
+GET /devices/{deviceId}/files/download?path=/sdcard/Download/myfile.txt
+```
+
+Downloads a file from the device. Returns binary data.
+
+```
+DELETE /devices/{deviceId}/files?path=/sdcard/Download/myfile.txt
+```
+
+Deletes a file at the specified path.
+
+### Connect Proxy to Device
+
+Routes the device's network traffic through a proxy. For managing saved proxy configurations, see [Proxy Configs](#proxy-configs).
+
+```
+GET /devices/{deviceId}/proxy
+```
+
+Returns whether a proxy is currently connected on this device.
+
+```
+POST /devices/{deviceId}/proxy
+Content-Type: application/json
+
+{
+  "host": "proxy.example.com",
+  "port": 1080,
+  "user": "username",
+  "password": "password"
+}
+```
+
+Connects a proxy to the device. Supports SOCKS5 and WireGuard:
+- For SOCKS5: provide `host`, `port`, `user`, `password`, and optionally a `socks5` config object
+- For WireGuard: provide `wireguard` with the tunnel configuration file content
+- `name` -- optional proxy name (used for WireGuard tunnel name)
+- `smartIp` -- optional, auto-detect proxy IP
+
+```
+DELETE /devices/{deviceId}/proxy
+```
+
+Disconnects any active proxy from the device.
+
+### eSIM
+
+Manage eSIM subscriptions on devices. Requires an active eSIM subscription -- you need to download an eSIM profile first via `POST /devices/{id}/esim` with credentials from an eSIM provider before list/status/APN endpoints return data.
+
+```
+GET /devices/{deviceId}/esim
+```
+
+Lists all eSIM subscriptions on the device.
+
+```
+POST /devices/{deviceId}/esim
+Content-Type: application/json
+
+{
+  "smDpAddr": "smdp.example.com",
+  "matchingId": "ABCD-1234-EFGH",
+  "enable": true
+}
+```
+
+Downloads an eSIM profile and optionally enables it. All three fields are required.
+
+```
+PUT /devices/{deviceId}/esim
+Content-Type: application/json
+
+{ "subId": 2 }
+```
+
+Enables a previously downloaded eSIM subscription by its subscription ID.
+
+```
+DELETE /devices/{deviceId}/esim?subId=2
+```
+
+Deletes an eSIM subscription. `subId` is a required query param.
+
+```
+GET /devices/{deviceId}/esim/status
+```
+
+Returns current eSIM connectivity information.
+
+```
+GET /devices/{deviceId}/esim/apn
+```
+
+Lists APN (Access Point Name) configurations for active eSIM subscriptions.
+
+```
+POST /devices/{deviceId}/esim/apn
+Content-Type: application/json
+
+{
+  "name": "My APN",
+  "apn": "internet",
+  "mcc": "310",
+  "mnc": "260",
+  "protocol": "IPV4V6",
+  "roamingProtocol": "IPV4V6",
+  "type": "default,supl",
+  "subId": 2
+}
+```
+
+Creates and sets an APN. All fields are required.
+
+```
+PUT /devices/{deviceId}/esim/apn
+Content-Type: application/json
+
+{ "apnId": 1, "subId": 2 }
+```
+
+Selects an existing APN as preferred.
+
+```
+PUT /devices/{deviceId}/esim/roaming
+Content-Type: application/json
+
+{ "enabled": true }
+```
+
+Toggles eSIM data roaming.
 
 ---
 
@@ -845,6 +1077,357 @@ Query params: `page`, `pageSize`, `orderBy`, `orderByDirection`
 
 ---
 
+## Agents
+
+### List Agents
+
+```
+GET /agents
+```
+
+Returns all available agents with their default configurations.
+
+---
+
+## Credentials
+
+Manage app login credentials. Credentials are organized by package name (app) and credential name (account). When running tasks, you can pass credentials so the agent can log into apps automatically.
+
+### List All Credentials
+
+```
+GET /credentials
+```
+
+Query params: `page` (default: 1), `pageSize` (default: 10)
+
+Returns all credentials across all packages for the authenticated user.
+
+### Initialize a Package
+
+```
+POST /credentials/packages
+Content-Type: application/json
+
+{ "packageName": "com.instagram.android" }
+```
+
+Registers a package before adding credentials to it.
+
+### List Credentials for a Package
+
+```
+GET /credentials/packages/{packageName}
+```
+
+Returns all credential names and their fields for the given package.
+
+### Create a Credential
+
+```
+POST /credentials/packages/{packageName}
+Content-Type: application/json
+```
+
+Creates a new named credential with fields for a package.
+
+### Get a Credential
+
+```
+GET /credentials/packages/{packageName}/credentials/{credentialName}
+```
+
+Returns the credential and all its fields.
+
+### Delete a Credential
+
+```
+DELETE /credentials/packages/{packageName}/credentials/{credentialName}
+```
+
+Deletes the credential and all its fields.
+
+### Add a Field to a Credential
+
+```
+POST /credentials/packages/{packageName}/credentials/{credentialName}/fields
+Content-Type: application/json
+
+{ "fieldType": "email", "value": "user@example.com" }
+```
+
+Field types: `email`, `username`, `password`, `api_token`, `phone_number`, `two_factor_secret`.
+
+### Update a Credential Field
+
+```
+PATCH /credentials/packages/{packageName}/credentials/{credentialName}/fields/{fieldType}
+Content-Type: application/json
+
+{ "value": "new-value" }
+```
+
+### Delete a Credential Field
+
+```
+DELETE /credentials/packages/{packageName}/credentials/{credentialName}/fields/{fieldType}
+```
+
+---
+
+## Profiles
+
+Manage reusable device profiles. A profile defines a device specification (hardware, locale, etc.) that can be applied to devices via `PUT /devices/{deviceId}/profile`.
+
+### List Profiles
+
+```
+GET /profiles
+```
+
+Query params:
+- `name` -- filter by name
+- `page` (default: 1), `pageSize` (default: 20)
+- `orderBy` -- `name`, `created_at`, `updated_at` (default: `created_at`)
+- `orderByDirection` -- `asc`, `desc` (default: `desc`)
+
+### Get Profile
+
+```
+GET /profiles/{profileId}
+```
+
+### Create Profile
+
+```
+POST /profiles
+Content-Type: application/json
+
+{
+  "name": "US Pixel 7",
+  "spec": { ... }
+}
+```
+
+`name` and `spec` (device specification object) are required.
+
+### Update Profile
+
+```
+PUT /profiles/{profileId}
+Content-Type: application/json
+
+{
+  "name": "US Pixel 7 v2",
+  "spec": { ... }
+}
+```
+
+### Delete Profile
+
+```
+DELETE /profiles/{profileId}
+```
+
+---
+
+## Proxy Configs
+
+Manage saved proxy configurations. These are reusable proxy setups that can be connected to devices via `POST /devices/{deviceId}/proxy`.
+
+### List Proxy Configs
+
+```
+GET /proxies
+```
+
+Query param: `protocol` -- `socks5` or `wireguard`
+
+### Get Proxy Config
+
+```
+GET /proxies/{proxyId}
+```
+
+### Create Proxy Config
+
+```
+POST /proxies
+Content-Type: application/json
+```
+
+### Update Proxy Config
+
+```
+PUT /proxies/{proxyId}
+Content-Type: application/json
+```
+
+### Delete Proxy Config
+
+```
+DELETE /proxies/{proxyId}
+```
+
+### Lookup Proxy Location
+
+```
+POST /proxies/lookup
+Content-Type: application/json
+
+{
+  "socks5": {
+    "host": "proxy.example.com",
+    "port": 1080,
+    "user": "username",
+    "password": "password"
+  }
+}
+```
+
+Tests a SOCKS5 proxy and returns its detected location.
+
+---
+
+## Carriers
+
+Manage mobile carrier configurations for eSIM. Carriers are identified by MCC (Mobile Country Code) and MNC (Mobile Network Code).
+
+### List Carriers
+
+```
+GET /carriers
+```
+
+Query params:
+- `country` -- filter by country name
+- `countryISO` -- filter by 2-letter ISO country code
+- `page` (default: 1), `pageSize` (default: 20)
+- `orderBy` -- `id`, `mcc`, `mnc`, `operator`, `country` (default: `country`)
+- `orderDir` -- `asc`, `desc` (default: `asc`)
+
+### Get Carrier
+
+```
+GET /carriers/{carrierId}
+```
+
+### Lookup Carrier by MCC/MNC
+
+```
+GET /carriers/lookup?mcc=310&mnc=260
+```
+
+Both `mcc` and `mnc` are required query params.
+
+### Create Carrier
+
+```
+POST /carriers
+Content-Type: application/json
+
+{
+  "country": "United States",
+  "mcc": "310",
+  "mnc": "260",
+  "operator": "T-Mobile"
+}
+```
+
+Required: `country`, `mcc`, `mnc`, `operator`.
+Optional: `company`, `country_code`, `country_iso`, `gsm_bands`, `lte_bands`, `umts_bands`, `protocols`, `mobile_prefix`, `website`, `detail_url`, `nsn_size`, `number_format`.
+
+### Update Carrier
+
+```
+PATCH /carriers/{carrierId}
+Content-Type: application/json
+
+{ "operator": "T-Mobile US" }
+```
+
+All fields are optional -- only the provided fields are updated.
+
+### Delete Carrier
+
+```
+DELETE /carriers/{carrierId}
+```
+
+---
+
+## Webhooks (Hooks)
+
+Subscribe to task events via webhooks. When events occur (task created, running, completed, failed, etc.), Mobilerun sends a POST to your URL.
+
+### List Hooks
+
+```
+GET /hooks
+```
+
+Query params: `page` (default: 1), `pageSize` (default: 20), `orderBy` (default: `createdAt`), `orderByDirection` (default: `desc`)
+
+### Get Hook
+
+```
+GET /hooks/{hook_id}
+```
+
+### Subscribe to a Webhook
+
+```
+POST /hooks/subscribe
+Content-Type: application/json
+
+{
+  "targetUrl": "https://example.com/webhook",
+  "events": ["created", "running", "completed", "failed", "cancelled"]
+}
+```
+
+Required: `targetUrl`. Optional: `events` (list of task events to filter), `service` (receiving service).
+
+### Edit a Hook
+
+```
+POST /hooks/{hook_id}/edit
+Content-Type: application/json
+
+{
+  "events": ["completed", "failed"],
+  "state": "active"
+}
+```
+
+Update the events filter or state (`active`, `disabled`, `deleted`) of a hook.
+
+### Unsubscribe
+
+```
+POST /hooks/{hook_id}/unsubscribe
+```
+
+Permanently deletes the subscription.
+
+### Get Sample Data
+
+```
+GET /hooks/sample
+```
+
+Returns sample webhook payload data -- useful for testing and field mapping.
+
+### Perform Hook (Zapier)
+
+```
+POST /hooks/perform
+```
+
+Processes a webhook payload. Used by Zapier integration.
+
+---
+
 ## Feedback
 
 Submit feedback to help improve the Mobilerun platform. This is important for identifying bugs and improving agent performance.
@@ -983,7 +1566,7 @@ All API errors follow this format:
 | `404` / `500` on device action | Device not found or invalid ID | Verify device ID, re-list devices |
 | Empty device list | No device connected | Guide user to connect via Portal APK (see [references/setup-and-billing.md](./references/setup-and-billing.md)) |
 | Device `disconnected` | Portal app closed or phone lost network | Ask user to check phone and reopen Portal |
-| Billing/plan error on `POST /devices` | Free plan, cloud devices need subscription | Tell user to check plans at https://cloud.mobilerun.ai/billing |
+| Billing/plan error on `POST /devices` | No device subscription | Tell user to add a device at https://cloud.mobilerun.ai/billing |
 | Action fails on valid device | Device may be busy, locked, or unresponsive | Try taking a screenshot first to check state |
 
 For detailed troubleshooting of common issues (device disconnects, keyboard failures, screenshot errors, app install problems, etc.), see [references/troubleshooting.md](./references/troubleshooting.md).

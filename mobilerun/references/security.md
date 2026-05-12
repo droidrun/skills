@@ -16,13 +16,9 @@ This document describes how the Mobilerun skill handles sensitive data, credenti
 
 ## Device Permissions
 
-The Droidrun Portal app on the user's Android device requires the **Accessibility Service** permission. This is the same system API used by screen readers and assistive technology. It allows the skill to:
+The Mobilerun Portal app on Android requires the **Accessibility Service** permission. This allows the platform to read the UI element tree and control the device. The user grants this explicitly during setup and can revoke it at any time.
 
-- Read the UI element tree (text, buttons, layout)
-- Simulate taps, swipes, and text input
-- Identify the foreground app
-
-The user grants this permission explicitly during setup and can revoke it at any time in Android Settings.
+For iOS, the `mobilerun-ios` CLI uses WebDriverAgent via Xcode, requiring Developer Mode on the iPhone.
 
 ## APK Installation
 

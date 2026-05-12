@@ -420,7 +420,7 @@ Content-Type: application/json
 
 ### File Transfer
 
-The `path` query param specifies the file path on the device. Use `/` as the root path to list top-level directories (Download, DCIM, Documents, etc.) — `/sdcard` does not resolve on most devices.
+The `path` query param specifies the file path on the device. The correct path depends on device type — physical devices use `/sdcard/Download/`, cloud and premium devices use `/` as root. Try `/sdcard` first, fall back to `/` if it fails.
 
 ```
 GET /devices/{deviceId}/files?path=/sdcard/Download

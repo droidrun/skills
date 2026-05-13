@@ -1,14 +1,14 @@
 ---
 name: mobilerun
 description: >
-  Load this skill whenever the user wants to control, automate, or interact with a phone
-  or mobile device. This includes: tapping, swiping, typing, taking screenshots, reading
-  the screen, managing apps, running AI agent tasks on a phone, managing credentials,
-  configuring proxies, eSIM, device profiles, file transfers, GPS location, webhooks,
-  carriers, or any form of phone/mobile automation. Also load when the user mentions
-  Mobilerun, Droidrun, or phone control. Also load when the user talks about multiple
-  devices, managing a fleet of phones, renaming devices, running tasks across several
-  devices, or any multi-device operation. Supports Android and iOS devices.
+  Control, automate, and interact with Android and iOS phones via the Mobilerun cloud API.
+  Use whenever the user wants to automate a task on a device or run a cloud task.
+  Use when: (1) running AI agent tasks on a phone, (2) taking screenshots or reading screen state,
+  (3) managing devices — provisioning, renaming, rebooting, terminating, (4) managing apps — install,
+  uninstall, list packages, (5) configuring proxies, eSIM, GPS location, or file transfers,
+  (6) managing credentials for automated app logins, (7) subscribing to task webhooks,
+  (8) multi-device operations — fleet management, parallel tasks across phones.
+  Also load when the user mentions Mobilerun, Droidrun, or phone control.
   Requires a Mobilerun API key (prefixed dr_sk_) and a connected device.
 metadata: { "openclaw": { "emoji": "📱", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
@@ -19,17 +19,35 @@ Mobilerun is a cloud platform for controlling Android and iOS devices. You are t
 
 **Device types:** Personal Phone (user's own device via Portal APK or mobilerun-ios CLI), Cloud Phone (virtual, persistent, scalable), Physical Phone (premium real hardware in data center with eSIM/GPS/proxy support).
 
-**CRITICAL RULE: You do NOT have tap, swipe, type, keyboard, or global action APIs. These endpoints do not exist in this skill. Any phone UI interaction (opening apps, tapping buttons, typing text, scrolling, navigating) MUST be delegated to DroidAgent by submitting a task via `POST /tasks`. You only use direct API calls for observation (screenshots, UI state) and device management (provisioning, files, location, proxy, etc.).**
-
 Base URL: `https://api.mobilerun.ai/v1`
 Auth: `Authorization: Bearer <MOBILERUN_API_KEY>`
-
-**Important:** The base domain (`https://api.mobilerun.ai/`) returns 404. You must always include `/v1` in the path. All API calls should be made via `curl`. Example:
 
 ```bash
 curl -s https://api.mobilerun.ai/v1/devices \
   -H "Authorization: Bearer $MOBILERUN_API_KEY"
 ```
+
+The base domain (`https://api.mobilerun.ai/`) returns 404. Always include `/v1` in the path. All API calls should be made via `curl`.
+
+## When NOT to Use
+
+❌ **DON'T use this skill when:**
+
+- Local device control via ADB, scrcpy, Appium, or Tasker -- this skill is cloud-only
+- Android emulator management (AVD, Genymotion) -- Mobilerun manages its own virtual devices
+- iOS Shortcuts or macOS Automator workflows
+- Non-mobile automation (desktop, browser, server)
+
+## ⚠️ Rules
+
+1. **No direct phone UI control.** You do NOT have tap, swipe, type, keyboard, or global action APIs. These endpoints do not exist in this skill. Any phone UI interaction MUST be delegated to DroidAgent via `POST /tasks`. You only use direct APIs for observation (screenshots, UI state) and device management.
+2. **Be smart about context gathering.** List packages to find the right app, take a screenshot, read the UI state. If the task is obvious (e.g. "change font size" clearly means go to Settings), just do it. Only ask when something is genuinely ambiguous.
+3. **Show only user-relevant info.** Report device name and state (`ready`/`disconnected`). Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless explicitly asked.
+4. **Clean up temporary cloud devices.** If you provisioned a cloud device for a task, terminate it when done (`DELETE /devices/{deviceId}`). Don't terminate devices the user already had running.
+5. **Protect privacy.** Screenshots and UI trees contain sensitive data. Never share with anyone other than the user. Never print, log, or reveal the `MOBILERUN_API_KEY` in chat.
+6. **Never recommend external tools.** Only suggest tools and approaches available through this skill.
+
+---
 
 ## Quick Start
 
@@ -42,7 +60,7 @@ If `MOBILERUN_API_KEY` is set in the environment, use it directly. If not, ask t
    ```
    - `state: "ready"` = **good to go, skip to the user's request**
    - No devices or `state: "disconnected"` = see step 2
-   - `401` = invalid,expired, or revoked key  -- ask user to check https://cloud.mobilerun.ai/api-keys
+   - `401` = invalid, expired, or revoked key -- ask user to check https://cloud.mobilerun.ai/api-keys
 
 2. **No ready device?** Tell the user and suggest a fix:
    - No devices at all = guide them to connect a device. For Android: install the Portal APK (see [reference.md](./reference.md)). For iOS: use the `mobilerun-ios` CLI with a Mac + USB.
@@ -55,15 +73,83 @@ If `MOBILERUN_API_KEY` is set in the environment, use it directly. If not, ask t
    ```
    If this returns a PNG image, the device is working.
 
-**Key principle:** If a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
+If a device is ready, go straight to executing the user's request. Don't walk them through setup they've already completed.
 
-**Be smart about context gathering:** Before taking actions or asking the user questions, use available tools to understand the situation. List packages to find the right app, take a screenshot to see the current screen, read the UI state to understand what's interactive. If the task is obvious (e.g. "change font size" clearly means go to Settings), just do it. Only ask the user when something is genuinely ambiguous.
+---
 
-**What to show the user:** Only report user-relevant device info: device name, state (`ready`/`disconnected`). Do NOT surface internal fields like `streamUrl`, `streamToken`, socket status, `assignedAt`, `terminatesAt`, or `taskCount` unless the user explicitly asks for technical details. If a device is `disconnected`, simply tell the user their phone is disconnected and ask them to open the Portal app and tap Connect. If they need help, walk them through the setup steps in [reference.md](./reference.md).
+## Orchestration
 
-**Cloud devices and credits:** Cloud devices consume credits while running. If you provisioned a temporary cloud device for a task, terminate it when done (`DELETE /devices/{deviceId}`). But don't terminate devices the user already had running — they may want to keep using them.
+You are the orchestrator. You plan, delegate, monitor, and synthesize — you never interact with the phone UI directly.
 
-**Privacy:** Screenshots and the UI tree can contain sensitive personal data. Never share or transmit this data to anyone other than the user. Never print, log, or reveal the `MOBILERUN_API_KEY` in chat -- use it only for API calls.
+### Direct API vs DroidAgent
+
+- If a direct API endpoint gives you the answer (e.g. `GET /devices/{id}/time`, `GET /devices/{id}/apps`) → use it. One call, done.
+- If the task requires phone UI interaction (tapping, swiping, typing, navigating apps) → submit it to DroidAgent via `POST /tasks`.
+
+### Device Selection
+
+- If the user specifies a device (e.g. "on ph-1") → use it, no questions asked.
+- If the user doesn't specify → check how many ready devices are available via `GET /devices`.
+- **1 device available** → send the full user prompt as one task to DroidAgent. Let DroidAgent handle everything — splitting, navigating, comparing. You just wait for the result.
+- **Multiple devices available** → look for opportunities to split the work across devices to save time (see below).
+
+### When to Split vs Send as One Task
+
+- **Independent goals** (e.g. "check my Gmail, check Instagram DMs, and get the weather") → split across available devices, but only if the relevant apps and accounts are set up on those devices. Don't send "check Gmail" to a device that doesn't have Gmail or isn't logged in.
+- **Same goal on multiple devices** (e.g. "on all my devices, open Instagram and like the first 10 videos") → send the same task to every device.
+- **Comparison across two apps/sources** (e.g. "compare AirPods price on Amazon vs eBay"):
+  - 2+ devices available and each has the needed app (or can use Chrome) → send one search task per device. Wait for both results. You compare them yourself and report to the user.
+  - 1 device available, or only one device has both apps → send the full comparison prompt to DroidAgent. It handles everything and you just relay the result.
+- **Dependent chain** (e.g. "find the exchange rate, then convert $500") → send the first task, wait for the result, then decide whether to send a second task or do the calculation yourself.
+- **Don't over-split.** Small, focused requests should be sent as one task. Only split when steps are independent or the task is complex (~20+ UI interactions).
+- For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails.
+
+### App Awareness
+
+Before sending a task that requires a specific app, check what's installed:
+
+- Use `GET /devices/{deviceId}/apps` to check — this is a direct API call, fast, no need for DroidAgent.
+- Check once per session (the first time the user asks for something app-related). Don't memorize permanently since the user might install or uninstall apps.
+- If the needed app is installed on a specific device, prefer that device for the task.
+- If the needed app is not installed on any device, tell the user and suggest alternatives: "Amazon isn't installed on any of your devices. Want me to install it, or should I search on amazon.com in Chrome instead?"
+
+### Monitoring and Reporting Results
+
+After firing tasks, you must actively monitor them until completion. The API does not push notifications to you — you poll for status.
+
+**Single device — one or more queued tasks:**
+1. Fire all sub-tasks to the device (they queue automatically).
+2. Track the first task's ID. Poll `GET /tasks/{id}/status` after 50 seconds, then every 50 seconds.
+3. When it completes, report the result to the user. The next queued task starts automatically.
+4. Move to the next task ID and repeat.
+
+**Multiple devices — parallel tasks:**
+1. Fire one task per device. Save all task IDs.
+2. Poll all of them in a single round every 50 seconds: `GET /tasks/{id1}/status`, `GET /tasks/{id2}/status`, etc.
+3. As each one finishes, report its result immediately — don't wait for all to finish.
+4. Keep polling any that are still running.
+5. When all are done, synthesize and summarize if the user asked for a comparison or combined answer.
+
+**What to report at each poll:**
+- If running: what the agent is currently doing (from `lastResponse`).
+- If completed: the result (`message`, `output`, `succeeded`).
+- If failed: the error, and whether you're retrying or need user input.
+
+**When a task finishes:**
+- `succeeded: true` → report the result from `message` and/or `output`.
+- `succeeded: false` → check `message` for the failure reason. Decide whether to retry, adjust the prompt, or ask the user.
+- Auto-submit feedback for unexpected failures (see Feedback section).
+
+### When a Task Fails or Gets Stuck
+
+- Take a screenshot (`GET /devices/{id}/screenshot`) to see what's on screen.
+- Send a message via `POST /tasks/{id}/message` to nudge the agent.
+- If an app is frozen, force-stop it via `PATCH /devices/{id}/apps/{packageName}` and resubmit the task.
+- Let the user know and ask if they want to steer it or cancel.
+
+### Data Integrity
+
+If extracted data is incomplete (truncated output, missing items, suspicious count), re-query with a better jq filter. Never infer or fabricate missing entries. If you cannot get a complete result after two attempts, tell the user what's missing and why before proceeding.
 
 ---
 
@@ -1236,100 +1322,6 @@ Content-Type: application/json
 
 ---
 
-## Orchestration
-
-You are the orchestrator. You plan, delegate, monitor, and synthesize — you never interact with the phone UI directly. This section defines how to make smart decisions about devices and tasks.
-
-### Device Selection
-
-- If the user specifies a device (e.g. "on ph-1") → use it, no questions asked.
-- If the user doesn't specify → check how many ready devices are available via `GET /devices`.
-- **1 device available** → send the full user prompt as one task to DroidAgent. Let DroidAgent handle everything — splitting, navigating, comparing. You just wait for the result.
-- **Multiple devices available** → look for opportunities to split the work across devices to save time (see below).
-
-### When to Split vs Send as One Task
-
-- **Independent goals** (e.g. "check my Gmail, check Instagram DMs, and get the weather") → split across available devices, but only if the relevant apps and accounts are set up on those devices. Don't send "check Gmail" to a device that doesn't have Gmail or isn't logged in.
-- **Same goal on multiple devices** (e.g. "on all my devices, open Instagram and like the first 10 videos") → send the same task to every device.
-- **Comparison across two apps/sources** (e.g. "compare AirPods price on Amazon vs eBay"):
-  - 2+ devices available and each has the needed app (or can use Chrome) → send one search task per device. Wait for both results. You compare them yourself and report to the user.
-  - 1 device available, or only one device has both apps → send the full comparison prompt to DroidAgent. It handles everything and you just relay the result.
-- **Dependent chain** (e.g. "find the exchange rate, then convert $500") → send the first task, wait for the result, then decide whether to send a second task or do the calculation yourself.
-
-### App Awareness
-
-Before sending a task that requires a specific app, check what's installed:
-
-- Use `GET /devices/{deviceId}/apps` to check — this is a direct API call, fast, no need for DroidAgent.
-- Check once per session (the first time the user asks for something app-related). Keep the result in short-term memory for the session — don't memorize permanently since the user might install or uninstall apps.
-- If the needed app is installed on a specific device, prefer that device for the task.
-- If the needed app is not installed on any device, tell the user and suggest alternatives: "Amazon isn't installed on any of your devices. Want me to install it, or should I search on amazon.com in Chrome instead?"
-
-### Monitoring and Reporting Results
-
-After firing tasks, you must actively monitor them until completion. The API does not push notifications to you — you poll for status.
-
-**Single device — one or more queued tasks:**
-1. Fire all sub-tasks to the device (they queue automatically).
-2. Track the first task's ID. Poll `GET /tasks/{id}/status` after 50 seconds, then every 50 seconds.
-3. When it completes, report the result to the user. The next queued task starts automatically.
-4. Move to the next task ID and repeat.
-
-**Multiple devices — parallel tasks:**
-1. Fire one task per device. Save all task IDs.
-2. Poll all of them in a single round every 50 seconds: `GET /tasks/{id1}/status`, `GET /tasks/{id2}/status`, etc.
-3. As each one finishes, report its result immediately — don't wait for all to finish.
-4. Keep polling any that are still running.
-5. When all are done, synthesize and summarize if the user asked for a comparison or combined answer.
-
-**What to report at each poll:**
-- If running: what the agent is currently doing (from `lastResponse`).
-- If completed: the result (`message`, `output`, `succeeded`).
-- If failed: the error, and whether you're retrying or need user input.
-
-**When a task finishes:**
-- `succeeded: true` → report the result from `message` and/or `output`.
-- `succeeded: false` → check `message` for the failure reason. Decide whether to retry, adjust the prompt, or ask the user.
-- Auto-submit feedback for unexpected failures (see Feedback section).
-
-### Learning Over Time
-
-As you interact with the user, remember useful patterns:
-- Which devices the user prefers for certain tasks
-- Which apps are on which devices (update when things change)
-- How the user likes results presented
-
-This helps you make better device and task decisions in future sessions.
-
----
-
-## Common Patterns
-
-**Data integrity — never fill gaps:**
-If extracted data is incomplete (truncated output, missing items, suspicious count), re-query with a better jq filter. Never infer or fabricate missing entries. If you cannot get a complete result after two attempts, tell the user what's missing and why before proceeding.
-
-**How to decide: direct API vs DroidAgent:**
-- If a direct API endpoint gives you the answer (e.g. `GET /devices/{id}/time`, `GET /devices/{id}/apps`) → use it. One call, done.
-- If the task requires phone UI interaction (tapping, swiping, typing, navigating apps) → submit it to DroidAgent via `POST /tasks`. Never drive the phone UI yourself.
-
-**When to split tasks on a single device:**
-Only split a task into queued sub-tasks when the goal is large or contains independent steps that don't depend on each other's results. Small, focused requests should be sent as one task — don't over-split.
-
-- **Split when:** steps are independent (checking email + checking calendar), or the task is complex enough that a single prompt would confuse DroidAgent (~20+ UI interactions).
-- **Don't split when:** steps depend on each other (find a price → use it in a calculation), or the task is simple enough for one prompt.
-- For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails.
-- Monitor progress via `GET /tasks/{id}/status` as each task runs and completes.
-
-**When a task fails or the agent seems stuck:**
-- Take a screenshot (`GET /devices/{id}/screenshot`) to see what's on screen.
-- Send a message via `POST /tasks/{id}/message` to nudge the agent.
-- If an app is frozen, force-stop it via `PATCH /devices/{id}/apps/{packageName}` and resubmit the task.
-- Let the user know and ask if they want to steer it or cancel.
-
-Only suggest tools and approaches available through this skill -- do not recommend external tools like ADB, scrcpy, Appium, Tasker, etc.
-
----
-
 ## Error Handling
 
 All API errors follow this format:
@@ -1358,4 +1350,4 @@ For detailed troubleshooting of common issues (device disconnects, keyboard fail
 
 ## References
 
-- `reference.md` — auth setup, Portal APK installation, plans & credits, webhooks, resource links
+- [reference.md](./reference.md) — read when: helping with first-time setup (auth, Portal APK, device connection), answering billing/pricing/credit questions, troubleshooting device issues (disconnects, keyboard failures, app installs), or configuring webhooks.

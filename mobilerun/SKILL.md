@@ -875,24 +875,18 @@ Use this to monitor task progress:
 After creating a task, follow this pattern:
 
 1. **Immediately** tell the user the task ID. The initial status is almost always `queued` — this is normal, not an error. The task will start shortly.
-2. **After 5 seconds** -- do the first status check. This catches quick tasks and confirms the agent started. If still `queued`, check every 15-30 seconds until it transitions to `running`.
-3. **After 30 seconds** -- check again if still running.
-4. **Subsequent checks** -- use your judgement on the interval based on:
-   - **Task complexity** -- a simple "open Chrome" task finishes fast; a multi-app workflow takes longer, so space out checks accordingly.
-   - **Progress** -- if steps are increasing and `lastResponse` is changing, the agent is working well; you can wait longer between checks. If the step count and `lastResponse` haven't changed, the agent may be stuck; check sooner and consider warning the user.
-   - **Time elapsed** -- the longer a task has been running successfully, the more you can trust it and wait between checks.
+2. **After 50 seconds** -- do the first status check.
+3. **Every 50 seconds after that** -- poll again until the task finishes.
 
-**At each check:**
-- Report to the user what the agent is doing (from `lastResponse` -- its current plan, thinking, what step it's on).
+**At each poll:**
+- Report what the agent is currently doing (from `lastResponse`).
 - Optionally take a screenshot (`GET /devices/{id}/screenshot`) to show the user what's on screen.
-- Optionally read the UI state (`GET /devices/{id}/ui-state`) for more context.
-- Give the user a meaningful update, not just "still running" -- e.g. "The agent is on step 8, currently in the Settings app looking for display options."
 
 **When the task finishes:**
 - Report the result (`message`, `succeeded`, `output`).
 - If the task failed unexpectedly, auto-submit feedback (see Feedback section).
 
-**If the agent seems stuck:**
+**If the agent seems stuck** (same `lastResponse` across multiple polls):
 - Send a message via `POST /tasks/{id}/message` to nudge it in the right direction.
 - Let the user know and ask if they want to steer it or cancel.
 
@@ -1225,9 +1219,30 @@ Before sending a task that requires a specific app, check what's installed:
 
 ### Monitoring and Reporting Results
 
-- **Dependent tasks** (e.g. comparing two things from two devices) → report the first result as it arrives ("Got the Amazon price, waiting for eBay results..."), then compare and report when both finish.
-- **Independent tasks** (e.g. different unrelated goals on different devices) → report each result as soon as its task finishes. Don't wait for all tasks to complete.
-- After getting results from multiple tasks, synthesize and summarize — don't just dump raw outputs.
+After firing tasks, you must actively monitor them until completion. The API does not push notifications to you — you poll for status.
+
+**Single device — one or more queued tasks:**
+1. Fire all sub-tasks to the device (they queue automatically).
+2. Track the first task's ID. Poll `GET /tasks/{id}/status` after 50 seconds, then every 50 seconds.
+3. When it completes, report the result to the user. The next queued task starts automatically.
+4. Move to the next task ID and repeat.
+
+**Multiple devices — parallel tasks:**
+1. Fire one task per device. Save all task IDs.
+2. Poll all of them in a single round every 50 seconds: `GET /tasks/{id1}/status`, `GET /tasks/{id2}/status`, etc.
+3. As each one finishes, report its result immediately — don't wait for all to finish.
+4. Keep polling any that are still running.
+5. When all are done, synthesize and summarize if the user asked for a comparison or combined answer.
+
+**What to report at each poll:**
+- If running: what the agent is currently doing (from `lastResponse`).
+- If completed: the result (`message`, `output`, `succeeded`).
+- If failed: the error, and whether you're retrying or need user input.
+
+**When a task finishes:**
+- `succeeded: true` → report the result from `message` and/or `output`.
+- `succeeded: false` → check `message` for the failure reason. Decide whether to retry, adjust the prompt, or ask the user.
+- Auto-submit feedback for unexpected failures (see Feedback section).
 
 ### Learning Over Time
 

@@ -176,7 +176,7 @@ GET /devices
 
 Query params:
 - `state` -- filter by state (array, e.g. `state=ready&state=assigned`)
-- `type` -- `dedicated_emulated_device`, `dedicated_physical_device`, `dedicated_premium_device`
+- `type` -- `dedicated_physical_device`, `dedicated_premium_device`
 - `name` -- filter by device name (partial match)
 - `page` (default: 1), `pageSize` (default: 20)
 - `orderBy` -- `id`, `createdAt`, `updatedAt`, `assignedAt` (default: `createdAt`)
@@ -217,7 +217,7 @@ Content-Type: application/json
 ```
 
 Query param:
-- `deviceType` -- `dedicated_emulated_device`, `dedicated_physical_device`, `dedicated_premium_device`
+- `deviceType` -- `dedicated_physical_device`, `dedicated_premium_device`
 
 After provisioning, wait for it to become ready:
 
@@ -228,13 +228,13 @@ GET /devices/{deviceId}/wait
 This blocks until the device state transitions to `ready`.
 
 **Cloud device workflow:**
-1. `POST /devices?deviceType=dedicated_emulated_device` -- provision, returns device in `creating` state
+1. `POST /devices?deviceType=dedicated_premium_device` -- provision, returns device in `creating` state
 2. `GET /devices/{deviceId}/wait` -- blocks until `ready`
 3. Use the `deviceId` for phone control or tasks
 
 **Temporary device for a task:**
 When the user wants to run a task but has no ready device, provision a temporary cloud device, run the task on it, then clean up:
-1. `POST /devices?deviceType=dedicated_emulated_device` with `{"name": "temp-task-device", "apps": [...]}` -- include any apps the task needs
+1. `POST /devices?deviceType=dedicated_premium_device` with `{"name": "temp-task-device", "apps": [...]}` -- include any apps the task needs
 2. `GET /devices/{deviceId}/wait` -- wait until ready
 3. `POST /tasks` with the new `deviceId` -- run the task (or submit multiple tasks -- they will queue and execute in order)
 4. Monitor via `GET /tasks/{taskId}/status` until all tasks finish

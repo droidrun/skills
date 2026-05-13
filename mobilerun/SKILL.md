@@ -118,6 +118,8 @@ Returns a map of device types to counts.
 
 Cloud devices require an active subscription. If the user's plan doesn't support it, the API will return a `403` error -- inform the user they need to terminate an existing device or upgrade at https://cloud.mobilerun.ai/billing. See [reference.md](./reference.md) for plan details.
 
+**Proxy required (Cloud & Physical only):** Cloud Phones and Physical Phones need a proxy for internet access. The user must have at least one proxy configured before provisioning (see [Proxy Configs](#proxy-configs)). Personal Phones use the phone's own network and do not need a proxy.
+
 ```
 POST /devices
 Content-Type: application/json
@@ -484,6 +486,8 @@ Disconnects any active proxy from the device.
 
 > Physical Phones and Personal Phones only. Not available on Cloud Phones.
 
+> **Important:** All Physical Phones are currently hosted in Germany. The user's eSIM must support activation or roaming in Germany to work on these devices.
+
 Manage eSIM subscriptions on devices. Requires an eSIM provider — you need to download an eSIM profile first before list/status/APN endpoints return data.
 
 ```
@@ -764,7 +768,7 @@ Content-Type: application/json
 {
   "task": "Open Chrome and search for weather",
   "deviceId": "uuid-of-device",
-  "llmModel": "google/gemini-3.1-flash-lite-preview"
+  "llmModel": "anthropic/claude-sonnet-4.6"
 }
 ```
 
@@ -773,7 +777,7 @@ Content-Type: application/json
 - `deviceId` -- UUID of the device to run on. Must be a device in `ready` state.
 
 **Optional fields:**
-- `llmModel` -- which model to use (default: `google/gemini-3.1-flash-lite-preview`, see `GET /models` for available models)
+- `llmModel` -- which model to use (default: `anthropic/claude-sonnet-4.6`, see `GET /models` for available models). Models change frequently -- always check `GET /models` for the current list.
 - `apps` -- list of app package names to pre-install
 - `credentials` -- list of `{ packageName, credentialNames[] }` for app logins
 - `maxSteps` -- max agent steps (default: 100)
@@ -973,7 +977,21 @@ Query params: `page`, `pageSize`, `orderBy`, `orderByDirection`
 GET /agents
 ```
 
-Returns all available agents with their default configurations.
+Returns all available agents with their default configurations. Each agent has pre-configured model and settings optimized for its domain:
+
+```json
+{
+  "id": 0,
+  "name": "Default",
+  "description": "General-purpose agent for any Android task.",
+  "llmModel": "anthropic/claude-sonnet-4.6",
+  "reasoning": true,
+  "vision": false,
+  "maxSteps": 100
+}
+```
+
+Use agent presets as guidance for model selection -- e.g., social media tasks may benefit from the models configured in the Instagram/TikTok/X agents.
 
 ---
 
@@ -1063,13 +1081,43 @@ DELETE /credentials/packages/{packageName}/credentials/{credentialName}/fields/{
 
 ---
 
-## Dashboard-Only Features
+## Proxy Configs
 
-The following features are managed through the Mobilerun dashboard at https://cloud.mobilerun.ai and are not available via the API:
+Manage saved SOCKS5 proxy configurations. A proxy must be configured before provisioning Cloud or Physical Phones. Only SOCKS5 protocol is supported.
 
-- **Proxy Configs** — saved SOCKS5 proxy configurations. A proxy must be configured before provisioning Cloud or Physical Phones. Manage at the Proxies tab in the dashboard.
+### List Proxy Configs
 
-If the user asks about any of these, direct them to the dashboard.
+```
+GET /proxies
+```
+
+Returns all saved proxy configurations for the account.
+
+### Create a Proxy Config
+
+```
+POST /proxies
+Content-Type: application/json
+
+{
+  "name": "US Residential",
+  "host": "proxy.example.com",
+  "port": 1080,
+  "user": "username",
+  "password": "password",
+  "protocol": "socks5"
+}
+```
+
+All fields are required.
+
+### Delete a Proxy Config
+
+```
+DELETE /proxies/{proxyId}
+```
+
+Removes a saved proxy configuration. Does not disconnect proxies already attached to devices.
 
 ---
 

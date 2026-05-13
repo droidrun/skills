@@ -147,11 +147,11 @@ Credits are consumed when running tasks. 1 credit = $0.01 USD.
 
 ### Device Type API Values
 
-| Type | Description |
-|------|-------------|
-| `dedicated_emulated_device` | Cloud Phone |
-| `dedicated_physical_device` | Physical Phone (real hardware) |
-| `dedicated_premium_device` | Physical Phone (premium tier) |
+| Type | Device | Cost |
+|------|--------|------|
+| `device_slot` | Personal Phone (user's own device) | $5/mo |
+| `dedicated_premium_device` | Cloud Phone (high-performance virtual) | $50/mo |
+| `dedicated_physical_device` | Physical Phone (real hardware in data center) | $150/mo |
 
 ### When to Recommend a Device Type
 

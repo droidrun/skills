@@ -109,26 +109,24 @@ Use `GET /devices/{id}/ui-state?filter=true` to get the accessibility tree with 
 - If the app is unresponsive, try pressing HOME and reopening the app.
 - If you're stuck after 2-3 attempts, tell the user what's happening and ask how to proceed.
 
-### Breaking Goals Into Queued Sub-Tasks (Agent)
+### Sending Tasks to DroidAgent
 
-Always break user goals into smaller sub-tasks when the steps are independent or semi-independent. Each sub-task should be ~7-15 UI interactions. Submit them all at once to the same device -- they queue and execute in order automatically.
+When sending a task to DroidAgent, don't break the goal into sub-tasks -- DroidAgent handles task splitting, navigation, and error recovery on its own. Submit the full user goal as one task.
 
-1. Split the goal into clear, self-contained sub-goals
-2. Submit all sub-tasks via `POST /tasks` to the same device -- they queue automatically
-3. For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails
-4. For dependent sub-tasks (step 2 only makes sense if step 1 succeeded), leave `continueOnFailure: false` (default)
-5. Monitor progress via `GET /tasks/{id}/status` as each task runs and completes
+**Task queuing:** You can submit multiple tasks to the same device -- they queue and execute one after another automatically. Only one task runs at a time; the rest wait. Tasks on different devices run in parallel.
 
-Example: "Order groceries from the Instacart app":
-1. `"Open Instacart and search for 'organic bananas', add the first result to cart"`
-2. `"Search for 'whole milk', add the first result to cart"` (`continueOnFailure: true` -- independent of step 1)
-3. `"Go to cart and report back the total price -- do not checkout"` (`continueOnFailure: false` -- depends on items being in cart)
+**Example -- "Check my email, check my calendar, and find me a good Italian restaurant nearby":**
 
-Example: "Check my email and my calendar":
-1. `"Open Gmail and tell me the subjects of unread emails from today"`
-2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true` -- completely independent)
+Submit 3 tasks to the same device:
+1. `"Open Gmail and tell me the subjects and senders of unread emails from today"`
+2. `"Open Google Calendar and tell me my events for today"`
+3. `"Open Google Maps, search for 'Italian restaurants near me', and tell me the name, rating, and address of the top 3 results"`
 
-Only keep steps in a single task when they are tightly coupled (e.g. filling a form where all fields must be submitted together, or a login flow where each step depends on the previous).
+**Example -- dependent goals (wait for result before continuing):**
+
+User asks: *"Order me an Uber to 123 Main Street"*
+1. Submit: `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming -- report back the estimated price and arrival time"`
+2. Wait for the result. Review it with the user before submitting the next task -- don't auto-confirm a purchase.
 
 ### Data Integrity
 
@@ -903,31 +901,6 @@ Instead of controlling a phone step-by-step, you can submit a natural language g
 
 Tasks require a paid subscription with credits. If the user doesn't have an active plan, the API will return an error -- let them know they need a subscription at https://cloud.mobilerun.ai/billing. See [references/setup-and-billing.md](./references/setup-and-billing.md) for plan and credit details.
 
-### IMPORTANT: Always Break Goals Into Multiple Small Tasks
-
-**Never submit a user's goal as one big task.** Always break it into multiple small, focused sub-tasks of ~7-15 UI interactions each, and submit them all to the same device. They queue and run back-to-back automatically — there is zero overhead to splitting.
-
-This is critical because:
-- **Reliability** — smaller tasks succeed far more often. The agent gets lost or confused on long, multi-step tasks. A focused 5-step task almost always works; a 30-step task frequently fails.
-- **Checkpoints** — you can see the result of each sub-task before the next one starts, and cancel or adjust if something went wrong.
-- **Cost** — a failed 30-step task wastes all the credits. With small tasks, only the failed step is wasted.
-
-**The only exception** is when steps are so tightly coupled they cannot be separated — e.g. a multi-field form that must be filled and submitted in one go, or a login flow where each step depends on the previous. Everything else should be split.
-
-**How to decide what goes in one task vs. separate tasks:**
-- Can this step succeed on its own, without knowing the result of the previous step? → **Separate task**
-- Does this step require the previous step's output or screen state to even begin? → **Same task** (or dependent sub-task with `continueOnFailure: false`)
-- Is this a different app or a different area of the same app? → **Separate task**
-- Would you describe this as "and then also..." when explaining it? → **Separate task**
-
-### Task Queuing
-
-Only one task runs on a device at a time. When you submit a task while the device is already busy, it enters a `queued` state and waits. Once the running task finishes and the device is released, the next queued task is automatically promoted and dispatched -- no polling or manual intervention needed.
-
-This means you can submit multiple tasks to the same device in sequence and they will execute one after another in the order they were created.
-
-**`continueOnFailure`:** By default, if a task fails, all subsequent queued tasks for the same device are automatically cancelled. Set `continueOnFailure: true` on a task to keep it in the queue even if the task before it fails. Tasks with `continueOnFailure: false` (the default) that are ahead in the queue will be cancelled, and the first `continueOnFailure: true` task will be promoted next. **Use `continueOnFailure: true` on any sub-task that is independent of the ones before it.**
-
 ### Run a Task
 
 ```
@@ -937,7 +910,7 @@ Content-Type: application/json
 {
   "task": "Open Chrome and search for weather",
   "deviceId": "uuid-of-device",
-  "llmModel": "anthropic/claude-sonnet-4.6"
+  "llmModel": "google/gemini-3.1-flash-lite-preview"
 }
 ```
 
@@ -946,7 +919,7 @@ Content-Type: application/json
 - `deviceId` -- UUID of the device to run on. Must be a device in `ready` state.
 
 **Optional fields:**
-- `llmModel` -- which model to use (default: `anthropic/claude-sonnet-4.6`, see `GET /models` for available models). Models change frequently -- always check `GET /models` for the current list.
+- `llmModel` -- which model to use (default: `google/gemini-3.1-flash-lite-preview`, see `GET /models` for available models). Models change frequently -- always check `GET /models` for the current list.
 - `apps` -- list of app package names to pre-install
 - `credentials` -- list of `{ packageName, credentialNames[] }` for app logins
 - `maxSteps` -- max agent steps (default: 100)
@@ -995,25 +968,6 @@ You don't see the phone screen -- the agent on the device does. Write prompts th
 "Open Chrome, go to amazon.com, search for 'wireless headphones', and report back the name and price of the top 3 results"
 "Open Spotify, go to Settings, turn off Autoplay, set Audio Quality to Very High, and disable Canvas"
 ```
-
-**Multi-task example — how to split a user request into queued sub-tasks:**
-
-User asks: *"Check my email, check my calendar, and find me a good Italian restaurant nearby"*
-
-Submit 3 tasks to the same device:
-1. `"Open Gmail and tell me the subjects and senders of unread emails from today"` (`continueOnFailure: true`)
-2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true`)
-3. `"Open Google Maps, search for 'Italian restaurants near me', and tell me the name, rating, and address of the top 3 results"` (`continueOnFailure: true`)
-
-All three are independent — each gets `continueOnFailure: true` so they all run regardless.
-
-**Multi-task example — dependent steps:**
-
-User asks: *"Order me an Uber to 123 Main Street"*
-
-Submit 2 tasks:
-1. `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming -- report back the estimated price and arrival time"`
-2. Only submit after reviewing the result of task 1 with the user — don't auto-confirm a purchase.
 
 **Include safety conditions when appropriate:**
 - `"If the app asks for login, stop and tell me"`
@@ -1159,7 +1113,7 @@ Returns all available agents with their default configurations. Each agent has p
   "id": 0,
   "name": "Default",
   "description": "General-purpose agent for any Android task.",
-  "llmModel": "anthropic/claude-sonnet-4.6",
+  "llmModel": "google/gemini-3.1-flash-lite-preview",
   "reasoning": true,
   "vision": false,
   "maxSteps": 100

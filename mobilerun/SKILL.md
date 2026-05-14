@@ -86,23 +86,31 @@ You are the orchestrator. You plan, delegate, monitor, and synthesize — you ne
 - If a direct API endpoint gives you the answer (e.g. `GET /devices/{id}/time`, `GET /devices/{id}/apps`) → use it. One call, done.
 - If the task requires phone UI interaction (tapping, swiping, typing, navigating apps) → submit it to DroidAgent via `POST /tasks`.
 
+### Sending Tasks to DroidAgent
+
+When sending a task to DroidAgent, don't break the goal into sub-tasks -- DroidAgent handles task splitting, navigation, and error recovery on its own. Submit the full user goal as one task.
+
+**Task queuing:** You can submit multiple tasks to the same device -- they queue and execute one after another automatically. Only one task runs at a time; the rest wait. Tasks on different devices run in parallel.
+
+**Example -- "Check my email, check my calendar, and find me a good Italian restaurant nearby":**
+
+Submit 3 tasks to the same device:
+1. `"Open Gmail and tell me the subjects and senders of unread emails from today"`
+2. `"Open Google Calendar and tell me my events for today"`
+3. `"Open Google Maps, search for 'Italian restaurants near me', and tell me the name, rating, and address of the top 3 results"`
+
+**Example -- dependent goals (wait for result before continuing):**
+
+User asks: *"Order me an Uber to 123 Main Street"*
+1. Submit: `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming -- report back the estimated price and arrival time"`
+2. Wait for the result. Review it with the user before submitting the next task -- don't auto-confirm a purchase.
+
 ### Device Selection
 
 - If the user specifies a device (e.g. "on ph-1") → use it, no questions asked.
 - If the user doesn't specify → check how many ready devices are available via `GET /devices`.
-- **1 device available** → send the full user prompt as one task to DroidAgent. Let DroidAgent handle everything — splitting, navigating, comparing. You just wait for the result.
-- **Multiple devices available** → look for opportunities to split the work across devices to save time (see below).
-
-### When to Split vs Send as One Task
-
-- **Independent goals** (e.g. "check my Gmail, check Instagram DMs, and get the weather") → split across available devices, but only if the relevant apps and accounts are set up on those devices. Don't send "check Gmail" to a device that doesn't have Gmail or isn't logged in.
-- **Same goal on multiple devices** (e.g. "on all my devices, open Instagram and like the first 10 videos") → send the same task to every device.
-- **Comparison across two apps/sources** (e.g. "compare AirPods price on Amazon vs eBay"):
-  - 2+ devices available and each has the needed app (or can use Chrome) → send one search task per device. Wait for both results. You compare them yourself and report to the user.
-  - 1 device available, or only one device has both apps → send the full comparison prompt to DroidAgent. It handles everything and you just relay the result.
-- **Dependent chain** (e.g. "find the exchange rate, then convert $500") → send the first task, wait for the result, then decide whether to send a second task or do the calculation yourself.
-- **Don't over-split.** Small, focused requests should be sent as one task. Only split when steps are independent or the task is complex (~20+ UI interactions).
-- For independent sub-tasks, set `continueOnFailure: true` so they run even if an earlier one fails.
+- **1 device available** → send the task to that device.
+- **Multiple devices available** → send independent tasks to different devices for parallel execution.
 
 ### App Awareness
 
@@ -117,18 +125,15 @@ Before sending a task that requires a specific app, check what's installed:
 
 After firing tasks, you must actively monitor them until completion. The API does not push notifications to you — you poll for status.
 
-**Single device — one or more queued tasks:**
-1. Fire all sub-tasks to the device (they queue automatically).
-2. Track the first task's ID. Poll `GET /tasks/{id}/status` after 50 seconds, then every 50 seconds.
-3. When it completes, report the result to the user. The next queued task starts automatically.
-4. Move to the next task ID and repeat.
+**Single device:**
+1. Submit the task. Poll `GET /tasks/{id}/status` after 50 seconds, then every 50 seconds.
+2. When it completes, report the result. If more tasks are queued, the next one starts automatically.
 
-**Multiple devices — parallel tasks:**
-1. Fire one task per device. Save all task IDs.
-2. Poll all of them in a single round every 50 seconds: `GET /tasks/{id1}/status`, `GET /tasks/{id2}/status`, etc.
+**Multiple devices:**
+1. Submit one task per device. Save all task IDs.
+2. Poll all of them every 50 seconds.
 3. As each one finishes, report its result immediately — don't wait for all to finish.
-4. Keep polling any that are still running.
-5. When all are done, synthesize and summarize if the user asked for a comparison or combined answer.
+4. When all are done, synthesize and summarize if the user asked for a comparison or combined answer.
 
 **What to report at each poll:**
 - If running: what the agent is currently doing (from `lastResponse`).
@@ -820,31 +825,6 @@ Instead of controlling a phone step-by-step, you can submit a natural language g
 
 Tasks require a paid subscription with credits. If the user doesn't have an active plan, the API will return an error -- let them know they need a subscription at https://cloud.mobilerun.ai/billing. See [reference.md](./reference.md) for plan and credit details.
 
-### IMPORTANT: Always Break Goals Into Multiple Small Tasks
-
-**Never submit a user's goal as one big task.** Always break it into multiple small, focused sub-tasks of ~7-15 UI interactions each, and submit them all to the same device. They queue and run back-to-back automatically — there is zero overhead to splitting.
-
-This is critical because:
-- **Reliability** — smaller tasks succeed far more often. The agent gets lost or confused on long, multi-step tasks. A focused 5-step task almost always works; a 30-step task frequently fails.
-- **Checkpoints** — you can see the result of each sub-task before the next one starts, and cancel or adjust if something went wrong.
-- **Cost** — a failed 30-step task wastes all the credits. With small tasks, only the failed step is wasted.
-
-**The only exception** is when steps are so tightly coupled they cannot be separated — e.g. a multi-field form that must be filled and submitted in one go, or a login flow where each step depends on the previous. Everything else should be split.
-
-**How to decide what goes in one task vs. separate tasks:**
-- Can this step succeed on its own, without knowing the result of the previous step? → **Separate task**
-- Does this step require the previous step's output or screen state to even begin? → **Same task** (or dependent sub-task with `continueOnFailure: false`)
-- Is this a different app or a different area of the same app? → **Separate task**
-- Would you describe this as "and then also..." when explaining it? → **Separate task**
-
-### Task Queuing
-
-Only one task runs on a device at a time. When you submit a task while the device is already busy, it enters a `queued` state and waits. Once the running task finishes and the device is released, the next queued task is automatically promoted and dispatched -- no polling or manual intervention needed.
-
-This means you can submit multiple tasks to the same device in sequence and they will execute one after another in the order they were created.
-
-**`continueOnFailure`:** By default, if a task fails, all subsequent queued tasks for the same device are automatically cancelled. Set `continueOnFailure: true` on a task to keep it in the queue even if the task before it fails. Tasks with `continueOnFailure: false` (the default) that are ahead in the queue will be cancelled, and the first `continueOnFailure: true` task will be promoted next. **Use `continueOnFailure: true` on any sub-task that is independent of the ones before it.**
-
 ### Run a Task
 
 ```
@@ -854,7 +834,7 @@ Content-Type: application/json
 {
   "task": "Open Chrome and search for weather",
   "deviceId": "uuid-of-device",
-  "llmModel": "anthropic/claude-sonnet-4.6"
+  "llmModel": "google/gemini-3.1-flash-lite-preview"
 }
 ```
 
@@ -863,7 +843,7 @@ Content-Type: application/json
 - `deviceId` -- UUID of the device to run on. Must be a device in `ready` state.
 
 **Optional fields:**
-- `llmModel` -- which model to use (default: `anthropic/claude-sonnet-4.6`, see `GET /models` for available models). Models change frequently -- always check `GET /models` for the current list.
+- `llmModel` -- which model to use (default: `google/gemini-3.1-flash-lite-preview`, see `GET /models` for available models). Models change frequently -- always check `GET /models` for the current list.
 - `apps` -- list of app package names to pre-install
 - `credentials` -- list of `{ packageName, credentialNames[] }` for app logins
 - `maxSteps` -- max agent steps (default: 100)
@@ -873,7 +853,7 @@ Content-Type: application/json
 - `executionTimeout` -- timeout in seconds (default: 1000)
 - `outputSchema` -- JSON schema for structured output (nullable). Only use when the user explicitly asks for structured/formatted data. When set, the agent returns its result as a JSON object matching the schema in the task's `output` field.
 - `vpnCountry` -- route through VPN in a specific country: `US`, `BR`, `FR`, `DE`, `IN`, `JP`, `KR`, `ZA`. Only use if the task specifically requires a certain region. VPN adds latency -- avoid unless needed.
-- `continueOnFailure` -- if `true`, this task stays queued even if the previous task on the same device fails (default: `false`). See [Task Queuing](#task-queuing).
+- `continueOnFailure` -- if `true`, this task stays queued even if the previous task on the same device fails (default: `false`).
 
 Returns:
 ```json
@@ -912,25 +892,6 @@ You don't see the phone screen -- the agent on the device does. Write prompts th
 "Open Chrome, go to amazon.com, search for 'wireless headphones', and report back the name and price of the top 3 results"
 "Open Spotify, go to Settings, turn off Autoplay, set Audio Quality to Very High, and disable Canvas"
 ```
-
-**Multi-task example — how to split a user request into queued sub-tasks:**
-
-User asks: *"Check my email, check my calendar, and find me a good Italian restaurant nearby"*
-
-Submit 3 tasks to the same device:
-1. `"Open Gmail and tell me the subjects and senders of unread emails from today"` (`continueOnFailure: true`)
-2. `"Open Google Calendar and tell me my events for today"` (`continueOnFailure: true`)
-3. `"Open Google Maps, search for 'Italian restaurants near me', and tell me the name, rating, and address of the top 3 results"` (`continueOnFailure: true`)
-
-All three are independent — each gets `continueOnFailure: true` so they all run regardless.
-
-**Multi-task example — dependent steps:**
-
-User asks: *"Order me an Uber to 123 Main Street"*
-
-Submit 2 tasks:
-1. `"Open the Uber app, set the destination to 123 Main Street, select UberX, and stop before confirming -- report back the estimated price and arrival time"`
-2. Only submit after reviewing the result of task 1 with the user — don't auto-confirm a purchase.
 
 **Include safety conditions when appropriate:**
 - `"If the app asks for login, stop and tell me"`
@@ -1070,7 +1031,7 @@ Returns all available agents with their default configurations. Each agent has p
   "id": 0,
   "name": "Default",
   "description": "General-purpose agent for any Android task.",
-  "llmModel": "anthropic/claude-sonnet-4.6",
+  "llmModel": "google/gemini-3.1-flash-lite-preview",
   "reasoning": true,
   "vision": false,
   "maxSteps": 100

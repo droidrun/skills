@@ -1,7 +1,7 @@
 ---
 name: mobilerun
 description: >
-  Control, automate, and interact with real Android and iOS phones via the Mobilerun API.
+  Control, automate, and interact with Android and iOS phones via the Mobilerun API.
   Mobilerun automates  mobile devices it is NOT a desktop browser
   automation tool. Use whenever the user wants to automate a task on a mobile device or run
   a cloud task on a phone.

@@ -24,6 +24,10 @@ jobs:
               echo "Packaging ${skill_name}..."
               cd "$skill_name"
               zip -r "../${skill_name}.skill" . -x '.*'
+              # '.*' strips the ignore rules; keep them in the archive
+              if [ -f .gitignore ]; then
+                zip -q "../${skill_name}.skill" .gitignore
+              fi
               cd ..
               echo "Created ${skill_name}.skill"
             fi

@@ -23,10 +23,10 @@ jobs:
       - name: Mirror harness files
         run: |
           rsync -a --delete \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude 'README.md' \
-            --exclude 'assets' \
+            --exclude '/.git' \
+            --exclude '/.github' \
+            --exclude '/README.md' \
+            --exclude '/assets' \
             /tmp/mobile-harness/ mobile-harness/
 
       - name: Commit and push

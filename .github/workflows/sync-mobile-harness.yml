@@ -22,7 +22,6 @@ jobs:
           rsync -a --delete \
             --exclude '.git' \
             --exclude '.github' \
-            --exclude '.gitignore' \
             --exclude 'README.md' \
             --exclude 'assets' \
             /tmp/mobile-harness/ mobile-harness/

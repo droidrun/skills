@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -27,13 +28,23 @@ jobs:
             /tmp/mobile-harness/ mobile-harness/
 
       - name: Commit and push
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add mobile-harness
           if git diff --cached --quiet; then
             echo "mobile-harness is up to date"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "chore: sync mobile-harness from droidrun/mobile-harness"
           git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN do not trigger push workflows.
+      - name: Trigger packaging
+        if: steps.commit.outputs.pushed == 'true'
+        run: gh workflow run package-skills.yml --ref master --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}

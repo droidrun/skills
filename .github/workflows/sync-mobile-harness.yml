@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Clone source
         run: git clone --depth 1 https://github.com/droidrun/mobile-harness.git /tmp/mobile-harness

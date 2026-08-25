@@ -154,6 +154,17 @@ check it before sending a new message (see Concurrency below). Each
 message's `parts` array uses the same part shapes as the live stream, so a
 client that reconnects late (or polls instead of streaming) can recover a
 pending HITL card from history alone — it doesn't have to have seen it live.
+A pending card shows up in history as a **synthetic assistant message**
+(`id` prefixed `synth_question_...`, `synthetic: true`) carrying the card
+part with `state: "input-available"`.
+
+**`turnActive: true` does not mean the assistant is working.** A turn
+blocked on an open HITL card also reports `turnActive: true` — indefinitely,
+since pending cards have no self-timeout. A polling client that only waits
+for `turnActive` to flip to `false` will wait forever. On every poll, scan
+the returned parts for `tool-question` / `tool-hitl-approval` with
+`state: "input-available"` and resolve them; only then is "still active"
+actually progress.
 
 ## HITL: question and approval cards
 
@@ -295,9 +306,12 @@ client.assistant.conversations.answer_permission(
 ## Pitfalls
 
 - **Buffered (`Accept: application/json`) mode times out at 110s** and
-  returns whatever partial `assistantText` it has as a `504`. Any turn that
-  might run long, or might hit a HITL card, must use streaming
-  (`Accept: text/event-stream`) instead.
+  returns whatever partial `assistantText` it has, plus an `errorText` like
+  `"Turn exceeded 110s; use SSE (Accept: text/event-stream) for long-running
+  turns"`. The turn **keeps running server-side** after this response — the
+  timeout is only on your reply, not on the assistant. Recover via history /
+  re-attach; don't re-send. Any turn that might run long, or might hit a
+  HITL card, must use streaming (`Accept: text/event-stream`) instead.
 - **Don't blindly retry a send on a network error.** You may have actually
   reached the server and started a turn; retrying can double-fire the
   message or collide with the 409 "already in flight" guard. On an
@@ -306,6 +320,13 @@ client.assistant.conversations.answer_permission(
   before sending anything new.
 - **Prefer SSE end to end.** It's the only mode that supports both long
   turns and HITL without dropping the pending-card state.
+- **A turn can die at birth.** The stream may emit `{"type":"error",
+  "errorText":"Bad Gateway"}` (then `finish`) right after the turn opens —
+  before any assistant output. Your user message **is** persisted in history
+  in that case. Recovery: send a short *nudge* message ("are you still on
+  it?") to start a fresh turn — the assistant sees the persisted message in
+  history. Do **not** re-send the original text verbatim; that duplicates
+  the instruction in the transcript.
 - **Reconnecting after any disconnect** is: `GET /assistant/chat/stream` first
   (replays the active turn from the start; `204` if nothing is running),
   then `GET /assistant/chat/messages` to refetch full history and pick up

@@ -320,6 +320,20 @@ client.assistant.conversations.answer_permission(
   before sending anything new.
 - **Prefer SSE end to end.** It's the only mode that supports both long
   turns and HITL without dropping the pending-card state.
+- **A turn can hang silently after a mid-turn network reset.** Observed
+  live: the raw-event stream shows `session.network.asked` ("Connection
+  reset by server") followed by `session.network.restored`, and then the
+  turn produces nothing but heartbeats for hours — `turnActive` stays
+  `true`, no card is pending, no settle signal arrives. Diagnose by
+  re-attaching (`GET /assistant/chat/stream` replays the turn's events; if
+  the tail is only heartbeats long after the last real event, the turn is
+  wedged). Remedy: `POST /assistant/chat/abort`, then send a short retry
+  message — but be aware abort can fail silently on exactly this state:
+  it may return `{ok:true}` while `turnActive` stays `true` and a new send
+  is rejected with "Device is busy" naming the session's own id. If that
+  happens, the session (and its device) is stuck platform-side — surface it
+  to the user / support and continue in a fresh session on another device;
+  don't loop on abort.
 - **A turn can die at birth.** The stream may emit `{"type":"error",
   "errorText":"Bad Gateway"}` (then `finish`) right after the turn opens —
   before any assistant output. Your user message **is** persisted in history

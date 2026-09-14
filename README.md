@@ -66,3 +66,14 @@ The `.skill` zip files are built automatically on every push to `master` and att
 │   ├── AGENTS.md
 │   └── ...
 ```
+
+## Reviewing automated updates
+
+The mobile-harness sync opens or updates a PR from
+`automation/mobile-harness-sync` to `master`. The proposal records the upstream
+commit and does not publish changes directly. Review and merge the PR to trigger
+the existing packaging/release workflow. The sync never approves or merges its own changes.
+
+Configure `AUTOMATION_PR_TOKEN` with Contents and Pull requests read/write for
+this repository. The organization policy blocking PR creation with the default
+`GITHUB_TOKEN` remains unchanged.

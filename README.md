@@ -41,6 +41,30 @@ npx skills add droidrun/skills --skill mobile-harness
 **Or download the skill directly:**
 [mobile-harness.skill](https://github.com/droidrun/skills/releases/latest/download/mobile-harness.skill)
 
+### [mobilerun-assistant](./mobilerun-assistant)
+
+Chat with the Mobilerun assistant through the HTTP API (curl) or SDKs — stream replies, answer questions, and resolve approval cards.
+
+**Install via the skills CLI:**
+```bash
+npx skills add droidrun/skills --skill mobilerun-assistant
+```
+
+**Or download the skill directly:**
+[mobilerun-assistant.skill](https://github.com/droidrun/skills/releases/latest/download/mobilerun-assistant.skill)
+
+### [mobilerun-assistant-mcp](./mobilerun-assistant-mcp)
+
+Chat with the Mobilerun assistant through the connected MCP server — send tasks, poll replies, answer questions, and resolve approval cards.
+
+**Install via the skills CLI:**
+```bash
+npx skills add droidrun/skills --skill mobilerun-assistant-mcp
+```
+
+**Or download the skill directly:**
+[mobilerun-assistant-mcp.skill](https://github.com/droidrun/skills/releases/latest/download/mobilerun-assistant-mcp.skill)
+
 ## Adding a New Skill
 
 1. Create a new directory at the root (e.g. `my-skill/`)
@@ -61,6 +85,10 @@ The `.skill` zip files are built automatically on every push to `master` and att
 ├── mobilerun-cloud/
 │   ├── SKILL.md
 │   └── references/
+├── mobilerun-assistant/
+│   └── SKILL.md
+├── mobilerun-assistant-mcp/
+│   └── SKILL.md
 ├── mobile-harness/              # mirror of droidrun/mobile-harness
 │   ├── SKILL.md
 │   ├── AGENTS.md

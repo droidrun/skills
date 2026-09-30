@@ -1,7 +1,7 @@
 ---
 name: mobilerun-assistant
 description: >
-  Talk to the Mobilerun virtual assistant (VA) over the chat API/SDK — send it a
+  Talk to the Mobilerun virtual assistant (VA) over the HTTP API (curl) and SDKs — send it a
   task, stream its reply, and handle the human-in-the-loop (HITL) cards it raises
   mid-turn (clarifying questions and approval prompts). Use when: (1) sending the
   Mobilerun assistant a natural-language task over chat, (2) reading its streamed
@@ -11,7 +11,8 @@ description: >
   (6) aborting an in-flight turn. Covers the Mobilerun chat REST endpoints under
   /assistant/chat and the @mobilerun/sdk (TypeScript) / mobilerun-sdk (Python)
   client (client.assistant.conversations.*). Requires a Mobilerun API key
-  (prefixed dr_sk_). Do NOT use for direct phone tap/swipe control — use the
+  (prefixed dr_sk_). If the Mobilerun MCP server is connected, use
+  mobilerun-assistant-mcp instead. Do NOT use for direct phone tap/swipe control — use the
   mobilerun (device control) skill for that.
 metadata: { "openclaw": { "emoji": "💬", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
@@ -19,6 +20,8 @@ metadata: { "openclaw": { "emoji": "💬", "primaryEnv": "MOBILERUN_API_KEY", "r
 # Talking to the mobilerun assistant
 
 ## Overview
+
+If the Mobilerun MCP server is connected, use `mobilerun-assistant-mcp` to talk to the assistant through its MCP tool.
 
 The mobilerun assistant ("the VA") is a conversational agent that runs real
 tasks — it can browse, use apps, and drive a device — inside a session you

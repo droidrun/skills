@@ -193,7 +193,8 @@ approval. After either answer, poll `get_messages` to follow the turn.
   error tells you to poll or abort, so do not retry the original message.
 - **Abort is session-scoped.** Call `abort` with `sessionId` to stop that
   session's in-flight turn. It does not touch a turn owned by a different
-  session. You may also pass `expectedTurnId` from `turn.id`.
+  session. Aborting a session with no turn in flight is an idempotent no-op.
+  You may also pass `expectedTurnId` from `turn.id`.
 - **Only treat final outcomes as final.** `completed` is normal success;
   `error` is failure. `aborted-budget` / `aborted-hard-limit` mean a limit
   cut the turn off — surface this to the user, do not silently retry.
@@ -209,6 +210,21 @@ approval. After either answer, poll `get_messages` to follow the turn.
 
 ## Pitfalls
 
+- **A turn can die at birth.** Immediately after sending, `send_message`
+  can return `status: "completed"` with `errorText: "Bad Gateway"` (or
+  another error) and empty or missing `assistantText`. The chat service puts
+  the stream's error frame into `errorText` of the buffered response; the
+  user message **is** persisted in history. Do not report this `completed`
+  response as task success. Check `get_messages`; if the turn is not active,
+  send a short nudge message ("are you still on it?") to start a fresh turn.
+  Do **not** resend the original text verbatim — that duplicates the
+  instruction in the transcript.
+- **Answer retries are not deduplicated over MCP.** The REST API coalesces
+  duplicate answers via an `Idempotency-Key`, but the MCP tool sends none.
+  If `answer_question`, `reject_question`, or `answer_permission` errors or
+  times out, call `get_messages` first. Retry only if the card is still
+  listed in `pending`. Rejecting an already-resolved question with
+  `reject_question` is a no-op (success).
 - **A wait timeout does not stop the assistant.** `send_message` waits at
   most 50 seconds (45 by default); the turn can keep running server-side.
   Poll instead of sending the task again.

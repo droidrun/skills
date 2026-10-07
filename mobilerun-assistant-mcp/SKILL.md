@@ -121,6 +121,7 @@ The response is a curated view, not a raw stream:
 - `turnActive`: whether a turn is still active.
 - `lastTurnOutcome`: the last turn's outcome.
 - `turn`: `{ id, phase, outcome }`, or `null` when no turn state is available.
+  `phase` is `created`, `running`, `closed`, `delivered`, or `failed`.
 - `messages`: messages with `id`, `role`, `createdAt`, `source`, and `parts`.
   Text parts keep `{ type: "text", text }`; question and approval parts are
   kept, while other parts are summarized as `{ type, toolCallId, state }`.
@@ -193,14 +194,19 @@ approval. After either answer, poll `get_messages` to follow the turn.
   error tells you to poll or abort, so do not retry the original message.
 - **Abort is session-scoped.** Call `abort` with `sessionId` to stop that
   session's in-flight turn. It does not touch a turn owned by a different
-  session. Aborting a session with no turn in flight is an idempotent no-op.
-  You may also pass `expectedTurnId` from `turn.id`.
-- **Only treat final outcomes as final.** `completed` is normal success;
-  `error` is failure. `aborted-budget` / `aborted-hard-limit` mean a limit
-  cut the turn off — surface this to the user, do not silently retry.
-  `aborted-fe` means the caller stopped it; `aborted-workflow` means an
-  automation-owned turn was superseded. `aborted-shutdown` is a transient
-  platform-side restart — check history for what happened.
+  session. Aborting a session with no turn in flight succeeds without
+  stopping anything, but it also dismisses that session's leftover question
+  cards. You may also pass `expectedTurnId` from `turn.id`; while that turn
+  is not yet terminal, `abort` can return `409` — poll and retry.
+- **Read the outcome from `turn.outcome` or `lastTurnOutcome`.** Both carry
+  the stored turn outcome. `completed` is normal success; `error` is failure.
+  `aborted` means the turn was stopped: by `abort`, by a budget or hard
+  limit, or by a platform restart. `crash-recovered` means the runtime
+  crashed and the platform closed the turn. `awaiting-input` means the turn
+  stopped to wait for a card in `pending`. `null` means the turn has not
+  settled yet. MCP does not expose the stream's `aborted-*` reasons. On
+  `aborted`, `error`, or `crash-recovered`, read the latest messages, tell
+  the user what happened, and do not silently retry the task.
 - **A session can go stale.** `404` means the session ID is unknown or
   archived. `410` with `session_machine_replaced` means its runtime was
   recycled and needs a fresh session. Treat it as "start a new session",
@@ -224,7 +230,9 @@ approval. After either answer, poll `get_messages` to follow the turn.
   If `answer_question`, `reject_question`, or `answer_permission` errors or
   times out, call `get_messages` first. Retry only if the card is still
   listed in `pending`. Rejecting an already-resolved question with
-  `reject_question` is a no-op (success).
+  `reject_question` is a no-op (success). `answer_question` on a card that
+  is no longer outstanding returns `404`; treat the card as resolved and
+  poll.
 - **A wait timeout does not stop the assistant.** `send_message` waits at
   most 50 seconds (45 by default); the turn can keep running server-side.
   Poll instead of sending the task again.

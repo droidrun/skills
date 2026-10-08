@@ -195,8 +195,8 @@ approval. After either answer, poll `get_messages` to follow the turn.
 - **Abort is session-scoped.** Call `abort` with `sessionId` to stop that
   session's in-flight turn. It does not touch a turn owned by a different
   session. Aborting a session with no turn in flight succeeds without
-  stopping anything, but it also dismisses that session's leftover question
-  cards. You may also pass `expectedTurnId` from `turn.id`; while that turn
+  stopping anything; without `expectedTurnId` it also dismisses that
+  session's leftover question cards. You may also pass `expectedTurnId` from `turn.id`; while that turn
   is not yet terminal, `abort` can return `409` — poll and retry.
 - **Read the outcome from `turn.outcome` or `lastTurnOutcome`.** Both carry
   the stored turn outcome. `completed` is normal success; `error` is failure.

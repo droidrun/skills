@@ -6,19 +6,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
+
+concurrency:
+  group: mobile-harness-sync-proposal
+  cancel-in-progress: false
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Check automation credential
+        env:
+          AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_PR_TOKEN }}
+        run: test -n "$AUTOMATION_TOKEN"
       - uses: actions/checkout@v4
         with:
           ref: master
+          persist-credentials: false
 
       - name: Clone source
-        run: git clone --depth 1 https://github.com/droidrun/mobile-harness.git /tmp/mobile-harness
+        id: source
+        run: |
+          git clone --depth 1 --branch main https://github.com/droidrun/mobile-harness.git "$RUNNER_TEMP/mobile-harness"
+          echo "sha=$(git -C "$RUNNER_TEMP/mobile-harness" rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Mirror harness files
         run: |
@@ -27,26 +38,20 @@ jobs:
             --exclude '/.github' \
             --exclude '/README.md' \
             --exclude '/assets' \
-            /tmp/mobile-harness/ mobile-harness/
+            "$RUNNER_TEMP/mobile-harness/" mobile-harness/
 
-      - name: Commit and push
-        id: commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile-harness
-          if git diff --cached --quiet; then
-            echo "mobile-harness is up to date"
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git commit -m "chore: sync mobile-harness from droidrun/mobile-harness"
-          git push
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      - name: Propose the mirrored changes for review
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ secrets.AUTOMATION_PR_TOKEN }}
+          base: master
+          branch: automation/mobile-harness-sync
+          delete-branch: true
+          add-paths: mobile-harness
+          title: 'chore: review mobile-harness sync'
+          commit-message: 'chore: sync mobile-harness ${{ steps.source.outputs.sha }}'
+          body: |
+            Mirror https://github.com/droidrun/mobile-harness/commit/${{ steps.source.outputs.sha }}.
 
-      # Pushes made with GITHUB_TOKEN do not trigger push workflows.
-      - name: Trigger packaging
-        if: steps.commit.outputs.pushed == 'true'
-        run: gh workflow run package-skills.yml --ref master --repo "$GITHUB_REPOSITORY"
-        env:
-          GH_TOKEN: ${{ github.token }}
+            Review this diff before merging. Packaging and publication run on the
+            resulting push to master, after the PR is merged by a maintainer.

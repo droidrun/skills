@@ -12,15 +12,13 @@ Code plugin install.
 
 ```bash
 cd <state-root>
-python -m venv .venv
+"$(command -v python3.13 || command -v python3.12 || command -v python3.11)" -m venv .venv
 .venv/bin/python -m pip install "mobilerun-core[local]"
-.venv/bin/python -c "from mobilerun_core import Mobilerun"
+.venv/bin/python -c "from mobilerun_core import Mobilerun; from importlib.metadata import version; print('mobilerun-core', version('mobilerun-core'), '/ mobilerun-core-local', version('mobilerun-core-local'))"
 ```
 
-Use Python 3.11, 3.12, or 3.13 to create the venv. `mobilerun-core` and
-`mobilerun-core-local` currently require Python `>=3.11,<3.14`. If the default
-`python` is not compatible, use another compatible interpreter, but do not
-commit `.venv/`.
+Needs Python 3.11-3.13; if none is on `PATH`, `uv python find '>=3.11,<3.14'`
+prints one. Do not commit `.venv/`.
 
 Tell agents which Python runtime to use:
 
@@ -34,15 +32,8 @@ internally for:
 
 - local Android ADB with optional Portal: `backend="local-android-adb"`
 - local Android Portal HTTP-only: `backend="local-android-http"`
-- local iOS Portal HTTP: `backend="local-ios-http"`
-
-Agents should still import only `mobilerun_core`:
-
-```python
-from mobilerun_core import Mobilerun
-```
-
-Do not teach agents to use `mobilerun_core_local` directly for normal control.
+- local iOS HTTP (`mobilerun-ios --local`, or the `ios-portal` app
+  on Simulator): `backend="local-ios-http"`
 
 ## Environment
 
@@ -61,11 +52,17 @@ export MOBILERUN_ANDROID_PORTAL_URL="http://127.0.0.1:18080"
 export MOBILERUN_ANDROID_PORTAL_TOKEN="..."
 ```
 
-Local iOS Portal can use:
+Local iOS can use:
 
 ```bash
-export MOBILERUN_IOS_PORTAL_URL="http://127.0.0.1:6643"
+export MOBILERUN_IOS_PORTAL_URL="http://127.0.0.1:8080"
+# Simulator through the ios-portal app: http://127.0.0.1:6643
 ```
+
+A local iPhone or iPad also needs the `mobilerun-ios` CLI
+(`brew install droidrun/tap/mobilerun-ios`) with a one-time
+device setup; see https://docs.mobilerun.ai/framework/guides/device-setup (iOS
+tab). Local mode needs no Mobilerun login.
 
 Do not print tokens or API keys in logs, chat, screenshots, or summaries. If an
 existing runtime exposes a differently named Mobilerun key, map it into

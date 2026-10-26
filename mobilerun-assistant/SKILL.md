@@ -47,7 +47,7 @@ the base URL `https://api.mobilerun.ai/v1`.
 | Create a session | `POST /assistant/chat/sessions` | `client.assistant.conversations.create()` |
 | Rename / archive / pin | `PATCH /assistant/chat/sessions/{id}` | `client.assistant.conversations.update()` |
 | Send a message | `POST /assistant/chat/message` | `client.assistant.conversations.send()` |
-| Read history | `GET /assistant/chat/messages` | `client.assistant.conversations.history()` |
+| Read history | `GET /assistant/chat/sessions/{id}/messages` | `client.assistant.conversations.history(sessionId, { limit, before })` |
 | Re-attach to a live turn | `GET /assistant/chat/stream` | `client.assistant.conversations.stream()` |
 | Abort the in-flight turn | `POST /assistant/chat/abort` | `client.assistant.conversations.abort()` |
 | Answer a question card | `POST /assistant/chat/question` | `client.assistant.conversations.answerQuestion()` |
@@ -147,33 +147,43 @@ the caller intentionally stopped it:
 ### 4. Read history
 
 ```bash
-curl -s "https://api.mobilerun.ai/v1/assistant/chat/messages?sessionId=<uuid>&limit=50" \
+curl -s "https://api.mobilerun.ai/v1/assistant/chat/sessions/<uuid>/messages?limit=10" \
   -H "Authorization: Bearer $MOBILERUN_API_KEY"
 ```
 
-Returns `{ messages: [...], turnActive: boolean, truncated?: boolean }`.
-`turnActive` tells you whether a turn is currently running in this session —
-check it before sending a new message (see Concurrency below). Each
-message's `parts` array uses the same part shapes as the live stream, so a
-client that reconnects late (or polls instead of streaming) can recover a
-pending HITL card from history alone — it doesn't have to have seen it live.
-A pending card shows up in history as a **synthetic assistant message**
-(`id` prefixed `synth_question_...`, `synthetic: true`) carrying the card
-part with `state: "input-available"`.
+Returns `{ data: Message[], firstId: string|null, lastId: string|null,
+hasMore: boolean, turn: { turnActive: boolean, turnState: {...}|null }|null,
+agent: { id, profile }|null }`.
+`limit` counts whole turns (1–20, default 10); a long turn is never split.
+For older pages, pass `before=<messageId>` using any real message id in the
+session; its containing turn is excluded. Use `firstId` as the next older
+anchor while `hasMore` is true. Unknown anchors return `400`; inactive or
+unknown sessions return `404`. The previous history route using a
+`sessionId` query parameter is removed.
 
-**`turnActive: true` does not mean the assistant is working.** A turn
-blocked on an open HITL card also reports `turnActive: true` — indefinitely,
-since pending cards have no self-timeout. A polling client that only waits
-for `turnActive` to flip to `false` will wait forever. On every poll, scan
-the returned parts for `tool-question` / `tool-hitl-approval` with
-`state: "input-available"` and resolve them; only then is "still active"
-actually progress.
+SDK: `client.assistant.conversations.history(sessionId, { limit, before })`
+(TypeScript), or
+`client.assistant.conversations.history(session_id, limit=..., before=...)`
+(Python).
+
+`turn` is present only on the newest page (no `before`); older pages return
+`turn: null`. Check the newest page's `turn.turnActive` before sending a new
+message (see Concurrency below). Pending HITL cards appear only on the
+newest page as **synthetic assistant messages** (`synthetic: true`) in
+`data`, with a card part in `state: "input-available"`.
+
+**`turn.turnActive: true` does not mean the assistant is working.** A turn
+blocked on an open HITL card also reports `turn.turnActive: true` — indefinitely,
+since pending cards have no self-timeout. Poll the newest page (no `before`),
+read `turn.turnActive` when `turn` is non-null, and scan `data` messages' parts
+for `tool-question` / `tool-hitl-approval` with `state: "input-available"`.
+Resolve open cards; waiting only for the turn to become inactive can wait forever.
 
 ## HITL: question and approval cards
 
 Mid-turn, the assistant can pause and ask a human for input. This shows up
 as a tool part on the stream (and, once emitted, in `GET
-/assistant/chat/messages` history):
+/assistant/chat/sessions/{id}/messages` history):
 
 - **Question card** — part type `tool-question`, `input: { questions: [...],
   questionID? }`. The assistant is asking a clarifying question (e.g. "Which
@@ -197,8 +207,8 @@ does not resolve a card.
 Do:
 - Surface the card content and collect the user's decision in your own UI.
 - Keep the SSE stream open (or, if you're polling, keep polling
-  `GET /assistant/chat/messages`) until you have that decision and have
-  posted it. There is no self-timeout on a pending card — it stays open
+  `GET /assistant/chat/sessions/{id}/messages` without `before`) until you
+  have that decision and have posted it. There is no self-timeout on a pending card — it stays open
   until resolved, aborted, or the platform reconciles a dead turn. Don't
   invent your own timeout that treats "still pending" as failure.
 - If you reconnect after a drop, `GET /assistant/chat/stream` replays
@@ -292,8 +302,9 @@ client.assistant.conversations.answer_permission(
 - **One turn per session, and a per-machine cap.** Sending a message while a
   turn is already in flight for that session returns `409`. Multiple
   sessions can run in parallel up to a platform-side limit; past that you
-  also get `409` with `code: "parallel_limit_reached"`. Check `turnActive`
-  from `GET /assistant/chat/messages` (or the session list) before sending.
+  also get `409` with `code: "parallel_limit_reached"`. Check `turn.turnActive`
+  from the newest `GET /assistant/chat/sessions/{id}/messages` page
+  (or the session list) before sending.
 - **Abort is session-scoped.** `POST /assistant/chat/abort` with `{sessionId}`
   stops that session's in-flight turn (idempotent — aborting an already-idle
   session just returns `204`). It does not touch a turn owned by a different
@@ -318,7 +329,8 @@ client.assistant.conversations.answer_permission(
 - **Don't blindly retry a send on a network error.** You may have actually
   reached the server and started a turn; retrying can double-fire the
   message or collide with the 409 "already in flight" guard. On an
-  ambiguous failure, check `turnActive` / history first, and prefer
+  ambiguous failure, check the newest history page
+  (`turn.turnActive` and open cards in `data`) first, and prefer
   `GET /assistant/chat/stream` to re-attach to whatever is already running
   before sending anything new.
 - **Prefer SSE end to end.** It's the only mode that supports both long
@@ -332,5 +344,6 @@ client.assistant.conversations.answer_permission(
   the instruction in the transcript.
 - **Reconnecting after any disconnect** is: `GET /assistant/chat/stream` first
   (replays the active turn from the start; `204` if nothing is running),
-  then `GET /assistant/chat/messages` to refetch full history and pick up
-  anything — including an unresolved HITL card — you might have missed.
+  then `GET /assistant/chat/sessions/{id}/messages` without `before` to
+  fetch the newest page, check `turn.turnActive`, and scan `data` for open
+  HITL cards. Use `before` to load older pages if needed.

@@ -126,10 +126,11 @@ for part in stream:
 
 ### 3. Read the stream
 
-The stream carries typed parts: assistant text deltas, tool-call parts (the
-assistant using a capability), and — the ones you must handle — HITL parts
-(next section). Treat any part type you don't recognize as informational and
-skip it rather than failing the turn.
+The SSE stream carries typed frames: assistant text deltas, tool-call frames
+(the assistant using a capability), and HITL frames (next section). Cards
+arrive as `tool-input-start` then `tool-input-available`, with `toolName`
+`hitl-approval` or `question`. Treat any frame type you don't recognize as
+informational and skip it rather than failing the turn.
 
 The turn ends with a settle signal. Only treat these as **final**:
 - `completed` — normal success.
@@ -154,8 +155,9 @@ curl -s "https://api.mobilerun.ai/v1/assistant/chat/messages?sessionId=<uuid>&li
 Returns `{ messages: [...], turnActive: boolean, truncated?: boolean }`.
 `turnActive` tells you whether a turn is currently running in this session —
 check it before sending a new message (see Concurrency below). Each
-message's `parts` array uses the same part shapes as the live stream, so a
-client that reconnects late (or polls instead of streaming) can recover a
+message's `parts` array stores HITL cards as `tool-question` /
+`tool-hitl-approval` parts (see below). A client that reconnects late
+(or polls instead of streaming) can recover a
 pending HITL card from history alone — it doesn't have to have seen it live.
 A pending card shows up in history as a **synthetic assistant message**
 (`id` prefixed `synth_question_...`, `synthetic: true`) carrying the card
@@ -171,25 +173,31 @@ actually progress.
 
 ## HITL: question and approval cards
 
-Mid-turn, the assistant can pause and ask a human for input. This shows up
-as a tool part on the stream (and, once emitted, in `GET
-/assistant/chat/messages` history):
+Mid-turn, the assistant can pause and ask a human for input. On the SSE
+stream, both cards arrive as `tool-input-start` followed by
+`tool-input-available`, with the same `toolCallId` and `toolName`:
 
-- **Question card** — part type `tool-question`, `input: { questions: [...],
+- **Question card** — `toolName: "question"`, `input: { questions: [...],
   questionID? }`. The assistant is asking a clarifying question (e.g. "Which
   of these two restaurants did you mean?").
-- **Approval card** — part type `tool-hitl-approval`, `input: { action,
+- **Approval card** — `toolName: "hitl-approval"`, `input: { action,
   title, params, permissionID, callID? }`. The assistant wants to perform a
   sensitive action (e.g. sending a payment, deleting something) and needs a
-  human sign-off first.
+  human sign-off first. Its `toolCallId` equals `input.permissionID`.
 
-Both use the same state machine on the part: `input-available` while the
-card is open and unanswered, then `output-available` (resolved) or
-`output-error` once a human responds.
+Resolution arrives as `tool-output-available` or `tool-output-error` on the
+same `toolCallId`; an approval output can be
+`{"decision":"approve","scope":"once"}`.
+In history (`GET /assistant/chat/messages`), the same cards are parts of type
+`tool-question` / `tool-hitl-approval`, with `state: "input-available"` while
+open, then `"output-available"` or `"output-error"` when resolved.
+Cards raised while the assistant delegates work internally (for example,
+while testing a routine) arrive on the same stream and are answered the same way.
 
 ### The rule that matters: blocked, not broken
 
-When your client sees `input-available`, **the turn is blocked, not
+When your client sees `tool-input-available` (or history state
+`input-available`), **the turn is blocked, not
 broken.** Wait only until you can collect an explicit decision from your
 user, then call the matching resolution method. Sending follow-up chat text
 does not resolve a card.
@@ -263,8 +271,9 @@ client.assistant.conversations.reject_question(question_id=question_id)
 
 ### Answer an approval
 
-Body: `{permissionId, response}`. The stream field is `permissionID` — send
-it as `permissionId`. `response` is exactly `once | always | reject`.
+Body: `{permissionId, response}`. Send the stream
+`toolCallId` / `input.permissionID` as `permissionId`.
+`response` is exactly `once | always | reject`.
 
 ```bash
 curl -sX POST https://api.mobilerun.ai/v1/assistant/chat/permission \
@@ -275,14 +284,14 @@ curl -sX POST https://api.mobilerun.ai/v1/assistant/chat/permission \
 
 ```typescript
 await client.assistant.conversations.answerPermission({
-  permissionId, // stream field: permissionID
+  permissionId, // stream: toolCallId / input.permissionID
   response: "once",
 });
 ```
 
 ```python
 client.assistant.conversations.answer_permission(
-    permission_id=permission_id,  # stream field: permissionID
+    permission_id=permission_id,  # stream: toolCallId / input.permissionID
     response="once",
 )
 ```

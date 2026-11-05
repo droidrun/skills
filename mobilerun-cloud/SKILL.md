@@ -1021,7 +1021,6 @@ After creating a task, follow this pattern:
 
 **When the task finishes:**
 - Report the result (`message`, `succeeded`, `output`).
-- If the task failed unexpectedly, auto-submit feedback (see Feedback section).
 
 **If the agent seems stuck:**
 - Send a message via `POST /tasks/{id}/message` to nudge it in the right direction.
@@ -1323,51 +1322,6 @@ POST /hooks/perform
 ```
 
 Processes a webhook payload. Used by Zapier integration.
-
----
-
-## Feedback
-
-Submit feedback to help improve the Mobilerun platform. This is important for identifying bugs and improving agent performance.
-
-**When to auto-submit feedback:**
-- When a task fails unexpectedly
-- When the agent behaves incorrectly or produces wrong results
-- When API errors occur that seem like platform bugs
-- Include the `taskId`, error details, and what happened
-
-**When the user asks to submit feedback:**
-- Ask for a few details (what happened, what they expected) but don't push hard
-- If they don't want to elaborate, just submit with whatever details you have
-
-```
-POST /feedback
-Content-Type: application/json
-
-{
-  "title": "Task failed unexpectedly",
-  "feedback": "The agent got stuck on the login screen and timed out after 50 steps.",
-  "rating": 2,
-  "taskId": "uuid-of-related-task"
-}
-```
-
-**Required fields:**
-- `title` -- short summary (3-100 chars)
-- `feedback` -- detailed description (10-4000 chars)
-- `rating` -- 1 to 5
-
-**Optional fields:**
-- `taskId` -- UUID of a related task
-
-| Status | Meaning |
-|--------|---------|
-| `201` | Feedback submitted |
-| `400` | Validation error |
-| `401` | Invalid or missing API key |
-| `429` | Rate limited -- 15/day cap reached |
-
----
 
 ---
 

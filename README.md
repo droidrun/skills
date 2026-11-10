@@ -43,7 +43,7 @@ npx skills add droidrun/skills --skill mobile-harness
 
 ### [mobilerun-assistant](./mobilerun-assistant)
 
-Chat with the Mobilerun assistant through the HTTP API (curl) or SDKs — stream replies, answer questions, and resolve approval cards.
+Chat with Mobilerun Agents through the HTTP API (curl) or SDKs — stream replies, answer questions, and resolve approval cards.
 
 **Install via the skills CLI:**
 ```bash
@@ -55,7 +55,7 @@ npx skills add droidrun/skills --skill mobilerun-assistant
 
 ### [mobilerun-assistant-mcp](./mobilerun-assistant-mcp)
 
-Chat with the Mobilerun assistant through the connected MCP server — send tasks, poll replies, answer questions, and resolve approval cards.
+Chat with Mobilerun Agents through the connected MCP server — send tasks, poll replies, answer questions, and resolve approval cards.
 
 **Install via the skills CLI:**
 ```bash

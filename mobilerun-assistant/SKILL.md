@@ -1,10 +1,10 @@
 ---
 name: mobilerun-assistant
 description: >
-  Talk to the Mobilerun virtual assistant (VA) over the HTTP API (curl) and SDKs — send it a
-  task, stream its reply, and handle the human-in-the-loop (HITL) cards it raises
-  mid-turn (clarifying questions and approval prompts). Use when: (1) sending the
-  Mobilerun assistant a natural-language task over chat, (2) reading its streamed
+  Talk to Mobilerun Agents (formerly called the assistant) over the HTTP API (curl) and SDKs — send your
+  agent a task, stream its reply, and handle the human-in-the-loop (HITL) cards it raises
+  mid-turn (clarifying questions and approval prompts). Use when: (1) sending a
+  Mobilerun agent a natural-language task over chat, (2) reading its streamed
   reasoning/tool/text output, (3) answering or rejecting a question card it asks,
   (4) approving or rejecting a sensitive-action card (once/always/reject),
   (5) reconnecting to a dropped stream or recovering a pending card from history,
@@ -17,23 +17,23 @@ description: >
 metadata: { "openclaw": { "emoji": "💬", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
 
-# Talking to the mobilerun assistant
+# Talking to Mobilerun Agents
 
 ## Overview
 
-If the Mobilerun MCP server is connected, use `mobilerun-assistant-mcp` to talk to the assistant through its MCP tool.
+If the Mobilerun MCP server is connected, use `mobilerun-assistant-mcp` to talk to your agent through its MCP tool.
 
-The mobilerun assistant ("the VA") is a conversational agent that runs real
+Mobilerun Agents is a hosted chat product: your agent (Matty by default) is a conversational agent that runs real
 tasks — it can browse, use apps, and drive a device — inside a session you
 create. You talk to it the same way you'd talk to a person over chat: send a
-message, read the streamed reply, and sometimes the assistant needs a human
+message, read the streamed reply, and sometimes your agent needs a human
 to make a call before it can continue (approve a risky action, or answer a
 clarifying question). That's HITL, and it is the part of this API that is
 easiest to get wrong — read the HITL section before you ship anything that
 sends messages unattended.
 
 A conversation lives in a **session** (a persistent chat thread with a
-title). Each message you send starts a **turn**: the assistant streams back
+title). Each message you send starts a **turn**: the agent streams back
 its reasoning, tool calls, and text until the turn settles.
 
 ## Auth & endpoints
@@ -91,7 +91,7 @@ curl -N -sX POST https://api.mobilerun.ai/v1/assistant/chat/message \
 ```
 
 The `sessionId` is required; `message` is the plain-text user turn; `agent`
-is optional (selects a non-default assistant persona if your account has
+is optional (selects a non-default agent persona if your account has
 more than one).
 
 ```typescript
@@ -127,7 +127,7 @@ for part in stream:
 ### 3. Read the stream
 
 The SSE stream carries typed frames: assistant text deltas, tool-call frames
-(the assistant using a capability), and HITL frames (next section). Cards
+(the agent using a capability), and HITL frames (next section). Cards
 arrive as `tool-input-start` then `tool-input-available`, with `toolName`
 `hitl-approval` or `question`. Treat any frame type you don't recognize as
 informational and skip it rather than failing the turn.
@@ -173,7 +173,7 @@ message (see Concurrency below). Pending HITL cards appear only on the
 newest page as **synthetic assistant messages** (`synthetic: true`) in
 `data`, with a card part in `state: "input-available"`.
 
-**`turn.turnActive: true` does not mean the assistant is working.** A turn
+**`turn.turnActive: true` does not mean the agent is working.** A turn
 blocked on an open HITL card also reports `turn.turnActive: true` — indefinitely,
 since pending cards have no self-timeout. Poll the newest page (no `before`),
 read `turn.turnActive` when `turn` is non-null, and scan `data` messages' parts
@@ -182,15 +182,15 @@ Resolve open cards; waiting only for the turn to become inactive can wait foreve
 
 ## HITL: question and approval cards
 
-Mid-turn, the assistant can pause and ask a human for input. On the SSE
+Mid-turn, the agent can pause and ask a human for input. On the SSE
 stream, both cards arrive as `tool-input-start` followed by
 `tool-input-available`, with the same `toolCallId` and `toolName`:
 
 - **Question card** — `toolName: "question"`, `input: { questions: [...],
-  questionID? }`. The assistant is asking a clarifying question (e.g. "Which
+  questionID? }`. The agent is asking a clarifying question (e.g. "Which
   of these two restaurants did you mean?").
 - **Approval card** — `toolName: "hitl-approval"`, `input: { action,
-  title, params, permissionID, callID? }`. The assistant wants to perform a
+  title, params, permissionID, callID? }`. The agent wants to perform a
   sensitive action (e.g. sending a payment, deleting something) and needs a
   human sign-off first. Its `toolCallId` equals `input.permissionID`.
 
@@ -200,7 +200,7 @@ same `toolCallId`; an approval output can be
 In history (`GET /assistant/chat/sessions/{id}/messages`), the same cards are parts of type
 `tool-question` / `tool-hitl-approval`, with `state: "input-available"` while
 open, then `"output-available"` or `"output-error"` when resolved.
-Cards raised while the assistant delegates work internally (for example,
+Cards raised while the agent delegates work internally (for example,
 while testing a routine) arrive on the same stream and are answered the same way.
 
 ### The rule that matters: blocked, not broken
@@ -331,7 +331,7 @@ client.assistant.conversations.answer_permission(
   returns whatever partial `assistantText` it has, plus an `errorText` like
   `"Turn exceeded 110s; use SSE (Accept: text/event-stream) for long-running
   turns"`. The turn **keeps running server-side** after this response — the
-  timeout is only on your reply, not on the assistant. Recover via history /
+  timeout is only on your reply, not on the agent. Recover via history /
   re-attach; don't re-send. Any turn that might run long, or might hit a
   HITL card, must use streaming (`Accept: text/event-stream`) instead.
 - **Don't blindly retry a send on a network error.** You may have actually
@@ -345,9 +345,9 @@ client.assistant.conversations.answer_permission(
   turns and HITL without dropping the pending-card state.
 - **A turn can die at birth.** The stream may emit `{"type":"error",
   "errorText":"Bad Gateway"}` (then `finish`) right after the turn opens —
-  before any assistant output. Your user message **is** persisted in history
+  before any agent output. Your user message **is** persisted in history
   in that case. Recovery: send a short *nudge* message ("are you still on
-  it?") to start a fresh turn — the assistant sees the persisted message in
+  it?") to start a fresh turn — the agent sees the persisted message in
   history. Do **not** re-send the original text verbatim; that duplicates
   the instruction in the transcript.
 - **Reconnecting after any disconnect** is: `GET /assistant/chat/stream` first

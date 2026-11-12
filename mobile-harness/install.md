@@ -40,7 +40,7 @@ internally for:
 Cloud devices require:
 
 ```bash
-export MOBILERUN_CLOUD_API_KEY="..."
+export MOBILERUN_API_KEY="..."
 export MOBILERUN_API_BASE_URL="https://api.mobilerun.ai/v1"
 export MOBILERUN_CLOUD_DEVICE_ID="..."
 ```
@@ -66,7 +66,7 @@ tab). Local mode needs no Mobilerun login.
 
 Do not print tokens or API keys in logs, chat, screenshots, or summaries. If an
 existing runtime exposes a differently named Mobilerun key, map it into
-`MOBILERUN_CLOUD_API_KEY` before running `mobilerun-core` code.
+`MOBILERUN_API_KEY` before running `mobilerun-core` code.
 
 ## Runtime Registration
 
@@ -126,9 +126,9 @@ For first-time setup or a missing dependency in OpenClaw, install:
 python -m pip install "mobilerun-core[local]"
 ```
 
-Provide the same environment variables listed above. If the host already
-provides `MOBILERUN_API_KEY`, set `MOBILERUN_CLOUD_API_KEY` to that value for
-`mobilerun-core`.
+Provide the same environment variables listed above. `mobilerun-core` reads
+`MOBILERUN_API_KEY`; the older `MOBILERUN_CLOUD_API_KEY` is still accepted when
+the new name is unset or empty.
 
 ## Updating
 

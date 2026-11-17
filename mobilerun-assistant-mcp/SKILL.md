@@ -27,12 +27,13 @@ Read the HITL section before sending messages unattended.
 
 ## Setup
 
-Connect your MCP client to either hosted endpoint:
+Connect your MCP client to one hosted endpoint, using HTTP transport:
+`https://cloud.mobilerun.ai/api/mcp`. Sign in one of two ways:
 
-- **API key:** `https://api.mobilerun.ai/v1/mcp`, using HTTP transport and
-  the header `Authorization: Bearer dr_sk_...` with your API key.
-- **OAuth:** `https://cloud.mobilerun.ai/api/mcp`. The MCP client discovers
-  the OAuth endpoints and opens browser sign-in when you first connect.
+- **OAuth:** no key needed. The MCP client discovers the login and opens
+  browser sign-in when you first connect.
+- **API key:** for headless clients, send the header
+  `Authorization: Bearer dr_sk_YOUR_API_KEY`.
 
 The MCP client holds the credential; this skill does not require a local
 `MOBILERUN_API_KEY`, curl, or jq. See

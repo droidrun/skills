@@ -6,7 +6,8 @@ description: >
   authenticated trigger, writing and running Serverless Functions, using a cloud
   sandbox, inspecting runs, or repairing a failing routine. Choose a task, function,
   sandbox, or routine before building. Do NOT use for desktop browser automation,
-  direct phone UI control alone (use mobilerun-cloud), or promises of event triggers.
+  direct phone UI control alone (use mobilerun-cloud). Event triggers are coming
+  soon; for those requests offer a schedule or API-triggered alternative.
 metadata: { "openclaw": { "emoji": "⏰", "primaryEnv": "MOBILERUN_API_KEY", "requires": { "env": ["MOBILERUN_API_KEY"], "bins": ["curl", "jq"] } } }
 ---
 
@@ -40,23 +41,37 @@ versioned Python code; it can run alone or as a step.
 
 ## Setup
 
-Base URL: `https://api.mobilerun.ai/v1`. Every request uses owner/API-key auth;
-no service key is needed. Use an existing `MOBILERUN_API_KEY` environment value.
+Base URL: `https://api.mobilerun.ai/v1`. Every request sends your API key as a Bearer
+token. Use an existing `MOBILERUN_API_KEY` environment value.
 If missing, direct the user to https://cloud.mobilerun.ai/api-keys and have them
 set it securely. Do not ask them to paste the key into chat.
 
-Run commands in Bash with `curl` and `jq`. Work in a private scratch directory;
-request/response files can contain user data. The header helper passes the key
-through a file descriptor so it does not appear in curl's argument list. Never
-turn on shell tracing or curl verbose/trace output.
+Run commands in Bash with `curl` and `jq`, in a private scratch directory for
+this task. Files can contain user data. Agent shells often lose variables and
+functions between calls. Write this setup once, then source it in **every**
+command. It stores no key value; the harness must supply `MOBILERUN_API_KEY`
+securely in each process. Saved IDs live in a separate private state file.
 
 ```bash
-set -euo pipefail
 umask 077
+cat > ./mobilerun-env.sh <<'ENV'
 BASE=https://api.mobilerun.ai/v1
+umask 077
 : "${MOBILERUN_API_KEY:?Set MOBILERUN_API_KEY securely first}"
 auth_header() { printf 'Authorization: Bearer %s\n' "$MOBILERUN_API_KEY"; }
+if [ -f ./mobilerun-state.sh ]; then . ./mobilerun-state.sh; fi
+ENV
 ```
+
+Each following Bash block runs as a separate script inside a subshell, sources
+that setup, and uses `set -euo pipefail` only inside that script. A failed check
+stops the block without ending a shell you keep using. Stay in the same private
+scratch directory and preserve response files. For an existing resource, set its
+actual ID and append it with `printf 'FLOW_ID=%q\n' "$FLOW_ID" >> mobilerun-state.sh`
+(or the corresponding ID name). Never save the API key in either file.
+
+The header helper passes the key through a file descriptor so it does not appear
+in curl's arguments. Never enable shell tracing or curl verbose/trace output.
 
 For retries, keep the same idempotency key and identical body. A changed request
 or new intentional run needs a new key. Do not blindly retry mutations after a
@@ -74,14 +89,23 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
    A temporary environment with several commands/shared files → sandbox.
    Scheduled work, an API trigger, or ordered steps → routine. A function can be
    its only step; a routine does not require a function or a phone.
+
+   Device steps need a phone the user already owns. List devices with
+   `mobilerun-cloud` and ask which to bind; if none exists, stop and ask.
+   Never add a provisioning step from the catalog to bypass a missing device
+   without explicit approval of its cost **per run**; Test run provisions one
+   too. The target app must already be signed in. Keep credentials out of the
+   document. State the frequency and that each task run is paid usage.
 3. **Discover live contracts.** Fetch these before drafting. The schema is raw
    JSON Schema; the other responses have different envelopes. Read the complete
    saved schema and the entries you intend to use, including their input/output
    schemas and device requirements. Catalog pagination must be exhausted.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
    curl --fail-with-body -sS "$BASE/flows/document-schema" -H @<(auth_header) > schema.json
-   curl --fail-with-body -sS "$BASE/flows/document-schema?profile=agent_routine" -H @<(auth_header) > agent-schema.json
    curl --fail-with-body -sS "$BASE/flows/template-context" -H @<(auth_header) > context.json
    curl --fail-with-body -sS "$BASE/flows/capacity" -H @<(auth_header) | jq .
    PAGE=1
@@ -94,11 +118,22 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
    done
    jq -s . catalog.ndjson > catalog.json
    jq '[.[] | {id, name, stepName, deviceFree}]' catalog.json
+   )
    ```
 
-   Use the full schema for owner routines. The `agent_routine` profile is a
-   narrower authoring contract for agent-managed routines, not a way to attach
-   an owner-created routine to an agent. The API remains authoritative.
+   Use the full schema for owner routines. Only when authoring an agent-managed
+   routine, also fetch the narrower profile:
+
+   ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
+   curl --fail-with-body -sS "$BASE/flows/document-schema?profile=agent_routine" -H @<(auth_header) > agent-schema.json
+   )
+   ```
+
+   This profile does not attach an owner-created routine to an agent. The API
+   remains authoritative.
 4. **Draft and show the document.** Read [documents](references/documents.md)
    and [triggers](references/triggers.md). Save `routine.json` or `routine.yaml`.
    Read [functions](references/functions.md) when code is needed and
@@ -109,37 +144,60 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
    warnings before continuing.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
    jq -n --slurpfile document routine.json '{document:$document[0]}' > document-body.json
    curl --fail-with-body -sS "$BASE/flows/document/validate" -H @<(auth_header) \
      -H 'Content-Type: application/json' --data-binary @document-body.json > validation.json
    jq '.data' validation.json
    jq -e '.data.valid == true' validation.json
+   )
    ```
 
 6. **Create disabled.** The document endpoint creates the trigger, actions,
    and disabled routine atomically. Do not add an invented `enabled` field to
-   the document. Save its IDs and canonical document.
+   the document. Before the **first** create, snapshot all action definitions
+   using the paginated [cleanup preparation](references/runs-and-repair.md#capacity-and-cleanup)
+   block. Replacements also create new definitions. Save IDs and the canonical
+   document.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
    CREATE_KEY=$(uuidgen)
    curl --fail-with-body -sS "$BASE/flows/document" -H @<(auth_header) \
      -H 'Content-Type: application/json' -H "Idempotency-Key: $CREATE_KEY" \
      --data-binary @document-body.json > created.json
    FLOW_ID=$(jq -er '.data.flow.id' created.json)
    TRIGGER_ID=$(jq -er '.data.flow.triggerId' created.json)
+   printf 'FLOW_ID=%q\nTRIGGER_ID=%q\n' "$FLOW_ID" "$TRIGGER_ID" >> mobilerun-state.sh
    jq '.data.document' created.json > canonical.json
    jq -e '.data.flow.enabled == false' created.json
+   )
    ```
 
-7. **Check.** This resolves configuration without executing steps. Review
+7. **Check.** This checks configuration without executing steps. It does not
+   prove referenced functions or devices still exist. Review
    errors, warnings, gates, missing connections, and device requirements. A
-   disabled routine may report `wouldFire: false`; inspect the reason.
+   disabled routine may report `wouldFire: false`; inspect the reason. For a
+   custom trigger, save the intended input object in `payload.json` and use it
+   for both Check and Test run. The example below is for no required inputs;
+   replace `{}` with the approved input when required. Schedules ignore this
+   request payload and use their stored values.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
+   if [ ! -f payload.json ]; then printf '{}\n' > payload.json; fi
+   jq -n --slurpfile payload payload.json '{payload:$payload[0]}' > check-body.json
    curl --fail-with-body -sS "$BASE/flows/$FLOW_ID/dry-run" -H @<(auth_header) \
-     -H 'Content-Type: application/json' -d '{"payload":{}}' > check.json
+     -H 'Content-Type: application/json' --data-binary @check-body.json > check.json
    jq '.data' check.json
    jq -e '.data.validation.valid == true and .data.testRun.ready == true' check.json
+   )
    ```
 
 8. **Test run.** This is real work, even while disabled. Set `payload` to the
@@ -150,22 +208,39 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
    not success. Confirm the user's success condition before enabling.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
    VERIFY_KEY=$(uuidgen)
-   jq -n --arg invocation "$VERIFY_KEY" '{invocationId:$invocation,payload:{}}' > verify-body.json
+   jq -n --arg invocation "$VERIFY_KEY" --slurpfile payload payload.json \
+     '{invocationId:$invocation,payload:$payload[0]}' > verify-body.json
    curl --fail-with-body -sS "$BASE/flows/$FLOW_ID/verify" -H @<(auth_header) \
      -H 'Content-Type: application/json' --data-binary @verify-body.json > verification.json
    jq '.data' verification.json
    EXECUTION_ID=$(jq -er '.data.executionId' verification.json)
+   printf 'EXECUTION_ID=%q\n' "$EXECUTION_ID" >> mobilerun-state.sh
+   )
    ```
 
 9. **Enable the unchanged routine.** After the successful execution, use its
    ID for verified activation. Any graph edit or function change requires a new
-   Test run. Pin function versions for reproducible recurring work.
+   Test run. Pin function versions for reproducible recurring work. For repair,
+   first [unblock only if blocked](references/runs-and-repair.md#diagnose-repair-re-test),
+   after the fix passes its Test run. If unblocked, repeat Test run and use the
+   fresh execution ID: unblocking can stale the earlier verification. Activation
+   does not clear a block. If activation returns `verification_stale`, repeat
+   Check and Test run before retrying; never bypass verification.
 
    ```bash
+   (
+   set -euo pipefail
+   . ./mobilerun-env.sh
    jq -n --arg id "$EXECUTION_ID" '{verificationExecutionId:$id}' > activate-body.json
    curl --fail-with-body -sS "$BASE/flows/$FLOW_ID/activate" -H @<(auth_header) \
      -H 'Content-Type: application/json' --data-binary @activate-body.json | jq '.data'
+   curl --fail-with-body -sS "$BASE/flows/$FLOW_ID" -H @<(auth_header) > activated.json
+   jq -e '.data.enabled == true and .data.status == "healthy"' activated.json
+   )
    ```
 
 10. **Report and watch.** Return the routine ID, enabled state, timing/timezone
@@ -179,7 +254,7 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
 
 | Symptom | Next action |
 |---|---|
-| 401 | Stop; ask the user to replace the rejected key securely. |
+| 401 | First check `type auth_header` in this shell and source the setup if missing. If the helper and environment are present and the key is rejected, stop and ask for secure replacement. |
 | Validation errors, unknown step or parameter | Refresh discovery; read [documents](references/documents.md). |
 | Schedule or custom input surprises | Read [triggers](references/triggers.md). |
 | Upload rejected, run failed, logs missing | Read [functions](references/functions.md). |

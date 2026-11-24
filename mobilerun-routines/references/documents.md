@@ -23,26 +23,44 @@ used as a working routine.
 
 ## JSON or YAML
 
-Both represent the same document. JSON is convenient for `jq`; YAML is easier
-for human review. Submit either a parsed JSON object (golden path), or parse YAML locally
-and send its object inside the JSON envelope. The API does not accept a YAML
-string. With an approved `routine.yaml`, Python, and the optional PyYAML parser
-(use a private virtual environment):
+Both represent the same document. The API accepts a document object, not a
+YAML string. Keep `routine.json` as the single source for validation and
+replacement. Export before editing using the block below; do not export again
+on top of an edit. With Python and the optional PyYAML parser in a private
+virtual environment, convert the saved JSON to YAML:
 
 ```bash
+(
+set -euo pipefail
+. ./mobilerun-env.sh
 python -m pip install PyYAML
 python - <<'PYTHON'
 import json
 from pathlib import Path
 import yaml
 
-document = yaml.safe_load(Path("routine.yaml").read_text())
-Path("yaml-body.json").write_text(json.dumps({"document": document}))
+Path("routine.yaml").write_text(yaml.safe_dump(
+    json.loads(Path("routine.json").read_text()), sort_keys=False))
 PYTHON
-curl --fail-with-body -sS "$BASE/flows/document/validate" -H @<(auth_header) \
-  -H 'Content-Type: application/json' --data-binary @yaml-body.json > yaml-validation.json
-jq '.data' yaml-validation.json
-jq -e '.data.valid == true' yaml-validation.json
+)
+```
+
+Edit `routine.yaml`, then write it **back to `routine.json`** before running the
+golden-path validation or the replace block:
+
+```bash
+(
+set -euo pipefail
+. ./mobilerun-env.sh
+python - <<'PYTHON'
+import json
+from pathlib import Path
+import yaml
+
+Path("routine.json").write_text(json.dumps(
+    yaml.safe_load(Path("routine.yaml").read_text())))
+PYTHON
+)
 ```
 
 Quote the root `"on":` key in YAML: YAML 1.1 parsers such as PyYAML can
@@ -59,8 +77,12 @@ not live business success or external side effects.
 Save the current canonical document before editing:
 
 ```bash
+(
+set -euo pipefail
+. ./mobilerun-env.sh
 curl --fail-with-body -sS "$BASE/flows/$FLOW_ID/document" -H @<(auth_header) > exported.json
 jq '.data' exported.json > routine.json
+)
 ```
 
 Replacement is a full document operation. Omitted devices, description, and
@@ -70,6 +92,9 @@ edit only the intended values, show the diff to the user, validate again, and
 pause before replacement because it preserves enabled state.
 
 ```bash
+(
+set -euo pipefail
+. ./mobilerun-env.sh
 curl --fail-with-body -sS -X PATCH "$BASE/flows/$FLOW_ID" -H @<(auth_header) \
   -H 'Content-Type: application/json' -d '{"enabled":false}' | jq '.data'
 jq -n --slurpfile document routine.json '{document:$document[0]}' > document-body.json
@@ -78,9 +103,15 @@ curl --fail-with-body -sS "$BASE/flows/document/validate" -H @<(auth_header) \
 jq -e '.data.valid == true' validation.json
 curl --fail-with-body -sS -X PUT "$BASE/flows/$FLOW_ID/document" -H @<(auth_header) \
   -H 'Content-Type: application/json' --data-binary @document-body.json | jq '.data.flow'
+curl --fail-with-body -sS "$BASE/flows/$FLOW_ID/document" -H @<(auth_header) > replaced-document.json
+jq '.data.on' replaced-document.json
+)
 ```
 
-Repeat Check → Test run → activation after any change. If the API reports a
+Confirm the edited trigger in that exported document and Check's `nextFireTime`.
+Repeat Check → Test run after any change. For a blocked routine, guarded unblock
+comes next, followed by a fresh Test run before activation (see runs and repair).
+If the API reports a
 shared trigger, an agent-managed routine, or unsupported stored behavior, stop
 that replacement path. Preserve the routine and report the conflict; do not
 silently clone it, detach it, or remove unsupported behavior.

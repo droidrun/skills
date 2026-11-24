@@ -13,7 +13,9 @@ Authorization: Bearer dr_sk_...
 
 - Keys are always prefixed with `dr_sk_` -- if a user provides something without this prefix, it's not a valid Mobilerun key
 - Keys are created from the Mobilerun dashboard and can be revoked or expired
-- Each key is tied to a single user account
+- A key can be full access or restricted to chosen permissions (a denied call returns `403` with `api_key_scope_denied`)
+- To show a device in a browser or app, mint a short-lived stream token (`dr_st_…`) instead of sending the API key to the frontend (see SKILL.md, "Stream Tokens")
+- Details: https://docs.mobilerun.ai/api-keys
 
 ### Getting an API Key
 
@@ -48,7 +50,7 @@ The key will look like: `dr_sk_a1b2c3d4e5f6...`
 
 ### Android (Portal APK)
 
-A personal device is the user's own Android phone connected to Mobilerun via the Droidrun Portal app.
+A Personal Phone is the user's own Android phone connected to Mobilerun via the Portal app. Full guide: https://docs.mobilerun.ai/guides/connect-android.
 
 ### Step 1: Download the Portal APK
 
@@ -112,102 +114,45 @@ Connect an iPhone using the `mobilerun-ios` CLI:
 3. Download and install WebDriverAgent via Xcode
 4. Run the `mobilerun-ios` CLI to connect
 
-See the full guide at https://docs.mobilerun.ai/guides/connect-iphone
+See the full guide at https://docs.mobilerun.ai/guides/connect-iphone (an iPhone can also connect over USB in the browser).
 
 ### Cloud Devices
 
-Cloud devices are virtual devices hosted by Mobilerun. They require a device subscription.
-
-If a user tries to provision a cloud device without a subscription, the API will return an error. Let them know they need to add a device at https://cloud.mobilerun.ai/billing.
+Cloud devices are hosted by Mobilerun: **Cloud Android** (virtual) and **Cloud iOS** (a hosted iPhone). Create one from the dashboard (https://cloud.mobilerun.ai) or with `POST /devices` (see SKILL.md, "Provision a Cloud Device"). Creating a device can cost money: only on the user's explicit request.
 
 Cloud devices go through these states after provisioning:
 `creating` -> `assigned` -> `ready`
 
-Use `GET /devices/{deviceId}/wait` to block until the device is ready.
+Use `GET /devices/{deviceId}/wait` to block until the device is ready. Pay-as-you-go Cloud Android devices can be stopped and resumed, and stop automatically after the idle timeout (see SKILL.md).
 
 ---
 
-## Device Types & Pricing
+## Device Types, Plans and Credits
 
-No base plan is required — sign up for free and add devices as needed.
+Do not quote prices from memory. Current plans and prices: **https://mobilerun.ai/pricing/**. How credits are metered: https://docs.mobilerun.ai/credits. Device types in detail: https://docs.mobilerun.ai/device-types.
 
-| Device | Hardware | Monthly Cost | Included Credits | Key Features |
-|--------|----------|-------------|-----------------|-------------|
-| **Personal Phone** | Your own device | $5/mo | 250/mo | BYO, persistent state |
-| **Cloud Phone** | Virtual | $50/mo | 2,500/mo | Scalable, profiles, persistent |
-| **Physical Phone** | Premium real device | $150/mo | 5,000/mo | eSIM, GPS, proxy, stealth |
+| Device | API `deviceType` | Hardware | Key features |
+|--------|------------------|----------|-------------|
+| **Personal Phone** | `device_slot` | Your own Android or iPhone | Bring your own device, persistent state. Eligible accounts can claim one free slot in the dashboard |
+| **Cloud Android** | `android_cloud_phone` | Virtual | Subscription (dedicated, always on) or pay as you go (per minute, stop and resume), profiles |
+| **Cloud iOS** | `ios_phone` | Dedicated: a real iPhone. On demand: virtual | Dedicated is persistent and always on, eSIM support available |
 
-### Credits
+Billing modes on `POST /devices` (`billing=auto|subscription|minute`) and the creation error codes are in https://docs.mobilerun.ai/devices.
 
-Credits are consumed when running tasks. 1 credit = $0.01 USD.
-
-- **~0.5 credits per agent step** (varies by model, context length, vision/reasoning)
-- Top up: $5 per 500 credits (one-time, no expiry)
-- Monitor usage at https://cloud.mobilerun.ai/billing
-
-### Device Type API Values
-
-| Type | Device | Cost |
-|------|--------|------|
-| `device_slot` | Personal Phone (user's own device) | $5/mo |
-| `dedicated_premium_device` | Cloud Phone (high-performance virtual) | $50/mo |
-| `dedicated_physical_device` | Physical Phone (real hardware in data center) | $150/mo |
+Two kinds of credits exist: phone credits (device minutes) and AI credits (agent tasks). Monitor usage in the dashboard.
 
 ### When to Recommend a Device Type
 
 - **Personal Phone**: user wants to use their own hardware, quick testing
-- **Cloud Phone**: scalable automation, multiple device identities via profiles
-- **Physical Phone**: social media automation, apps that detect emulators, eSIM/GPS/proxy needed
-- **User hits a billing error on `POST /devices`**: they need a device subscription at https://cloud.mobilerun.ai/billing
+- **Cloud Android**: scalable automation, separate profiles, persistent state or short pay-as-you-go sessions
+- **Cloud iOS**: automating iOS apps without owning hardware
+- **User hits a billing error on `POST /devices`**: read the `code` in the response and point them to https://mobilerun.ai/pricing/
 
 ---
 
 ## Webhooks
 
-Subscribe to task lifecycle events to get notified when tasks change state.
-
-### Subscribe
-
-```
-POST /hooks/subscribe
-Content-Type: application/json
-
-{
-  "targetUrl": "https://your-server.com/webhook",
-  "events": ["completed", "failed"],
-  "service": "other"
-}
-```
-
-Events: `created`, `running`, `completed`, `failed`, `cancelled`, `paused`
-Services: `zapier`, `n8n`, `make`, `internal`, `other`
-
-### List Hooks
-
-```
-GET /hooks
-```
-
-### Get Hook
-
-```
-GET /hooks/{hook_id}
-```
-
-### Edit Hook
-
-```
-POST /hooks/{hook_id}/edit
-Content-Type: application/json
-
-{ "events": ["completed"], "state": "active" }
-```
-
-### Unsubscribe
-
-```
-POST /hooks/{hook_id}/unsubscribe
-```
+Signed callbacks for task and other events. Endpoints (`/webhooks`), event names and signature verification are described in SKILL.md ("Webhooks") and at https://docs.mobilerun.ai/webhooks.
 
 ---
 
@@ -235,7 +180,7 @@ The Mobilerun dashboard is:
 
 - **https://cloud.mobilerun.ai**
 
-Use this for login, API keys, billing, and account management.
+Use this for login, API keys, devices, and account management.
 
 ### API Docs
 
@@ -245,9 +190,15 @@ The OpenAPI spec is:
 
 Use this when the user wants the raw API schema or API reference source.
 
-- **https://docs.mobilerun.ai/quickstart**
+- **https://docs.mobilerun.ai/quickstart** and **https://docs.mobilerun.ai/api-reference**
 
-Use this when the user wants the raw API schema or API reference source.
+Use these for the quickstart and the full API reference. Every docs page is also available as Markdown by appending `.md`; the page index is https://docs.mobilerun.ai/llms.txt.
+
+### Pricing
+
+- **https://mobilerun.ai/pricing/**
+
+Use this for plans and prices.
 
 ### Discord
 

@@ -33,10 +33,7 @@ Read this when device actions fail, API calls return unexpected errors, or the u
 
 - **Symptom:** `POST /tasks` returns `402` with "Insufficient Balance" or similar.
 - **Cause:** The user's credit balance is too low to run the task.
-- **Fix:** Tell the user to add credits or upgrade their plan at https://cloud.mobilerun.ai/billing. To check current balance:
-  ```
-  GET /user/me
-  ```
+- **Fix:** Tell the user to add credits or check their plan. Credit balance and usage are in the dashboard; how credits are metered: https://docs.mobilerun.ai/credits. Plans and prices: https://mobilerun.ai/pricing/. Alternatively the user can use their own model key: https://docs.mobilerun.ai/byok.
 
 **5. Screenshot returns 500 Internal Server Error**
 
@@ -64,31 +61,27 @@ Read this when device actions fail, API calls return unexpected errors, or the u
 - **Cause:** Some devices restrict programmatic launching of the Play Store, or the Play Store package name doesn't respond to standard launch intents.
 - **Fix:** Use a tap-based approach instead:
   1. Take a screenshot to see the current screen
-  2. Navigate to the home screen: `POST /devices/{deviceId}/key` with `HOME`
-  3. Look for the Play Store icon in the UI tree and tap it, or use the shell endpoint:
-     ```
-     POST /devices/{deviceId}/shell
-     {"command": "am start -a android.intent.action.MAIN -n com.android.vending/.AssetBrowserActivity"}
-     ```
+  2. Navigate to the home screen: `POST /devices/{deviceId}/global` with `{"action": 2}`
+  3. Look for the Play Store icon in the UI tree (`GET /devices/{deviceId}/ui-state?filter=true`) and tap it with `POST /devices/{deviceId}/tap`
 
 **8. App install from library fails (app not found in library)**
 
 - **Symptom:** Trying to install an app via the apps endpoint returns an error indicating the app isn't found in the library.
 - **Cause:** The app hasn't been added to the user's Mobilerun app library. The install endpoint only works with apps that are pre-uploaded to the library.
 - **Fix:** Tell the user to:
-  1. Add the app to their library at https://cloud.mobilerun.ai (app library section)
+  1. Add the app to their library in the Apps tab at https://cloud.mobilerun.ai (see https://docs.mobilerun.ai/apps)
   2. Alternatively, install the app manually on the device through the Play Store, then use it directly
-  3. For cloud devices, specify required apps in the `apps` array when provisioning: `POST /devices?deviceType=... { "apps": ["com.example.app"] }`
+  3. For cloud devices, specify required apps in the `apps` array when provisioning: `POST /devices?deviceType=android_cloud_phone { "apps": ["com.example.app"] }`
 
 **9. `DELETE /keyboard` (clear) fails -- 'Accessibility fallback failed'**
 
 - **Symptom:** `DELETE /devices/{deviceId}/keyboard` returns an error about accessibility fallback failing.
 - **Cause:** The clear-text action relies on the accessibility service to select and delete text. It can fail if the focused field doesn't support text selection or the accessibility service lost its connection.
 - **Fix:** Use an alternative approach to clear text:
-  1. Type replacement text with the `clearFirst` flag:
+  1. Type replacement text with the `clear` flag:
      ```
      POST /devices/{deviceId}/keyboard
-     {"text": "", "clearFirst": true}
+     {"text": "", "clear": true}
      ```
   2. If that also fails, tap on a different field and then back to reset the focus, then retry
   3. As a last resort, ask the user to check that the Accessibility Service is still enabled on the device
@@ -98,3 +91,14 @@ Read this when device actions fail, API calls return unexpected errors, or the u
 - **Symptom:** `GET /devices/{deviceId}` returns `state: "migrating"`.
 - **Cause:** The cloud device is being moved between physical hosts. This happens during infrastructure maintenance or load balancing and is automatic.
 - **Fix:** Wait for migration to complete -- it typically takes 1-5 minutes. Poll the device status with `GET /devices/{deviceId}`. Do not attempt any device actions during migration. Once the state returns to `ready`, resume normal operation. If it stays in `migrating` for more than 10 minutes, suggest the user contact support via Discord (https://discord.gg/kc2JYQfX2c).
+
+**11. Cloud device is `stopped` (or stopped by itself)**
+
+- **Symptom:** `GET /devices/{deviceId}` returns `state: "stopped"`, possibly with `stopReason: "IDLE_TIMEOUT"`; actions fail.
+- **Cause:** A pay-as-you-go cloud device was parked, manually, by the idle timeout, or because phone credits ran out. Its apps, data and identity are kept.
+- **Fix:** `POST /devices/{deviceId}/resume`. If it returns `409 DEVICE_CAPACITY_UNAVAILABLE`, retry shortly. To change or turn off the idle timer: `PUT /devices/{deviceId}/idle-timeout` (see SKILL.md, "Idle Timeout"). Reading device state does not keep a device awake.
+
+**12. Task keeps failing at a login or payment step**
+
+- **Cause:** The app needs credentials or a human approval.
+- **Fix:** Attach a stored credential to the task (see SKILL.md, "Credentials"). For recurring or scheduled flows use the `mobilerun-routines` skill.

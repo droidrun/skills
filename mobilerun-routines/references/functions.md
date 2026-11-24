@@ -2,7 +2,8 @@
 
 Use a function for saved Python logic; use a sandbox for temporary commands and
 shared files. Functions consume function minutes. Obtain permission for that
-usage before running. Python helpers need Python 3.11–3.13 and the optional
+usage before running; see [function usage](https://docs.mobilerun.ai/credits).
+Python helpers need Python 3.11–3.13 and the optional
 `mobilerun-functions` package; routine-only work needs neither.
 
 ## Write, inspect, and run locally
@@ -192,9 +193,10 @@ a bounded deadline. Persistent unavailability or an expired retention period
 needs reporting; do not relaunch side effects just to get logs. Keep log links
 private and request a new one after expiry.
 
-SDK **6.3.1** equivalents (with an authenticated `mobilerun` client and the
-returned `RUN_ID`): wait for logs before requesting the link. Both waits have
-a bounded default deadline and report unavailable logs instead of re-running work.
+SDK **6.3.2** equivalents (with an authenticated `mobilerun` client and the
+returned `RUN_ID`): wait for logs before requesting the link. See the
+[function-run helpers](https://docs.mobilerun.ai/sdk/helpers#function-runs) for
+wait options and errors; do not re-run work merely to obtain logs.
 
 ```typescript
 const run = mobilerun.compute.runs.fromId(RUN_ID); await run.waitLogs(); const logs = await run.logs();
@@ -216,11 +218,9 @@ step name may be `functions.run`. Bind the stable function ID, a ready version,
 and input in that entry's required shape. Pin the version for reproducibility.
 Copy no service identifiers or internal API routes into a document.
 
-For the page-title example, build the rest of `routine.json` from the live
-schema, select the discovered function step name, bind the uploaded ID and
-version, and use the same `input.json` that passed hosted execution. Validate,
-create disabled, Check, Test run, inspect the title, then activate. Do not create
-a phone for a device-free function step.
+Bind the uploaded ID, pinned ready version, and tested input using the live
+catalog, then follow the golden path. No phone is needed for a device-free step.
+See [using a function in a routine](https://docs.mobilerun.ai/routines/functions#use-it-in-a-routine).
 
 On `429 concurrency_limit`, wait for the admitted run or sandbox to finish and
 respect the returned retry delay. Retry the same logical request with its saved
@@ -239,4 +239,4 @@ curl --fail-with-body -sS -X DELETE "$BASE/compute/functions/$FUNCTION_ID" -H @<
 ```
 
 Keep functions needed by the user's retained routine.
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/routines/functions.

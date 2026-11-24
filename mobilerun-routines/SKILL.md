@@ -95,7 +95,10 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
    Never add a provisioning step from the catalog to bypass a missing device
    without explicit approval of its cost **per run**; Test run provisions one
    too. The target app must already be signed in. Keep credentials out of the
-   document. State the frequency and that each task run is paid usage.
+   document. State the frequency and that each task run is paid usage; see
+   [credits and usage](https://docs.mobilerun.ai/credits). Use the
+   [task guide](https://docs.mobilerun.ai/tasks) for task options and
+   [BYOK](https://docs.mobilerun.ai/byok) when the user supplies a model key.
 3. **Discover live contracts.** Fetch these before drafting. The schema is raw
    JSON Schema; the other responses have different envelopes. Read the complete
    saved schema and the entries you intend to use, including their input/output
@@ -262,4 +265,4 @@ UUIDs; use your runtime's UUID generator if it is unavailable.
 | Failure, blocked health, stale verification, capacity refusal | Read [runs and repair](references/runs-and-repair.md). |
 | Missing destination or result notification | Read [delivery](references/delivery.md). |
 
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/routines.

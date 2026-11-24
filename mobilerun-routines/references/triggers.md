@@ -68,4 +68,4 @@ Scheduled triggers cannot be fired through this route.
 App, device, and platform event triggers are **Soon**, even if discoverable
 contracts expose them. Offer scheduling or custom fire as the available path.
 
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/routines/triggers.

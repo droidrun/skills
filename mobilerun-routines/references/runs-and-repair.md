@@ -120,7 +120,9 @@ replacement. Report an unresolved error with its IDs and observed response.
 Fetch live capacity before creating or cloning. Disabled routines still consume
 slots; pausing does not free one. Let the API decide capacity. On refusal, show
 its response and ask about removing an explicitly disposable routine or changing
-the plan; never invent a quota or auto-upgrade.
+the plan; never invent a quota or auto-upgrade. See
+[capacity and cost](https://docs.mobilerun.ai/routines/runs#capacity-and-cost)
+and [credits and usage](https://docs.mobilerun.ai/credits).
 
 Before the **first create**, save a paginated action snapshot. Do this once per
 task; do not overwrite it after creating or replacing a document. Both operations
@@ -207,4 +209,4 @@ curl --fail-with-body -sS -X DELETE "$BASE/actions/$ACTION_ID" -H @<(auth_header
 
 List again to confirm the deleted IDs are absent. Keep the user's retained
 routine, function versions, connections, and devices intact.
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/routines/runs.

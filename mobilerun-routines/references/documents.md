@@ -7,19 +7,9 @@ catalog. Build one trigger and ordered, uniquely identified steps; pass data
 using the live template grammar. A stable step ID lets later steps reference
 its output. Device-free eligibility comes from the selected catalog entries.
 
-This short skeleton is an **example — check the live schema and catalog**.
-Replace `STEP_USES` with a discovered `stepName` and fill `with` using that
-entry's `paramsSchema`. Empty steps or missing required parameters cannot be
-used as a working routine.
-
-```json
-{
-  "version": 1,
-  "name": "USER_APPROVED_NAME",
-  "on": {"custom": {}},
-  "steps": [{"id": "work", "uses": "STEP_USES", "with": {}}]
-}
-```
+Start from the [live document templates](https://docs.mobilerun.ai/routines/documents#copy-a-template),
+then refresh the schema and catalog before adapting one. Templates do not replace
+live discovery or validation; never invent a step or its required parameters.
 
 ## JSON or YAML
 
@@ -85,11 +75,10 @@ jq '.data' exported.json > routine.json
 )
 ```
 
-Replacement is a full document operation. Omitted devices, description, and
-trigger options clear those values. Omitting settings preserves stored settings;
-present settings replaces them, with defaults for omitted inner fields. Export,
-edit only the intended values, show the diff to the user, validate again, and
-pause before replacement because it preserves enabled state.
+Replacement is a full document operation, not a patch. Export first, preserve
+all values you want to keep, show the diff, validate, and pause before replacing:
+enabled state is preserved. Read the [replacement semantics](https://docs.mobilerun.ai/routines/documents#replace)
+before omitting fields or settings.
 
 ```bash
 (
@@ -111,9 +100,8 @@ jq '.data.on' replaced-document.json
 Confirm the edited trigger in that exported document and Check's `nextFireTime`.
 Repeat Check → Test run after any change. For a blocked routine, guarded unblock
 comes next, followed by a fresh Test run before activation (see runs and repair).
-If the API reports a
-shared trigger, an agent-managed routine, or unsupported stored behavior, stop
-that replacement path. Preserve the routine and report the conflict; do not
+If the API reports a shared trigger, an agent-managed routine, or unsupported
+stored behavior, stop that replacement path. Preserve the routine and report the conflict; do not
 silently clone it, detach it, or remove unsupported behavior.
 
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/routines/documents.

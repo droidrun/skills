@@ -3,7 +3,8 @@
 Use a sandbox when the user needs commands with shared files or a one-off Python
 snippet. Use a Serverless Function for saved, typed, repeatable code. Sandbox
 minutes include idle time: obtain permission for cost, set a short lifetime, and
-stop promptly. No phone is needed for ordinary Python.
+stop promptly. See [usage](https://docs.mobilerun.ai/credits); no phone is
+needed for ordinary Python.
 
 Create once and inspect readiness before execution. This example runs without
 network access. Replace the command with the user's approved snippet, retaining
@@ -68,4 +69,4 @@ jq '.data | {id,status}' sandbox-stopped.json
 
 Stopping can be asynchronous. Confirm it is stopped rather than assuming HTTP
 202 means cleanup has finished. A stopped history record can remain visible.
-More depth: https://docs.mobilerun.ai/agents/workflows.
+More depth: https://docs.mobilerun.ai/sandboxes.

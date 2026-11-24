@@ -4,6 +4,8 @@ A monorepo of Mobilerun agent skills and OpenClaw plugins.
 
 ## Available Skills
 
+- [mobilerun-routines](./mobilerun-routines) — Build, verify, schedule, and repair routines, Serverless Functions, and sandboxes.
+
 ### [mobilerun-cloud](./mobilerun-cloud)
 
 Control real Android and iOS phones through the Mobilerun API -- tap, swipe, type, take screenshots, read the UI tree, and manage apps.

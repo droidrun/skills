@@ -4,6 +4,18 @@ All notable changes to the Mobilerun skill are documented here. Format follows [
 
 ## [Unreleased]
 
+### Changed (2026-11 refresh)
+- Removed all prices; plans and prices are linked at https://mobilerun.ai/pricing/
+- Device types renamed to Personal Phone, Cloud Android, Cloud iOS; `deviceType` values are `device_slot`, `android_cloud_phone`, `ios_phone` (old `dedicated_*` values are rejected)
+- Updated routes: `POST /devices/{id}/screenshots`, `/webhooks` (replaces `/hooks`), multipart file upload, app library filters, credential create body, proxy configs
+- Default task model is `mobilerun/mobile-agent-fast`; `reasoning` defaults to off
+- Docs links point to https://docs.mobilerun.ai
+
+### Added (2026-11 refresh)
+- Stop and resume, idle timeout, reset, capabilities, device summary
+- Stream tokens (`/identity/stream-keys`, SDK `streamTokens.create`, SDK 6.3.2+)
+- Pointer to the `mobilerun-routines` skill for schedules, routines, Serverless Functions and sandboxes
+
 ### Added
 - Troubleshooting guide with 10 common issues (references/troubleshooting.md)
 - Searchable tags in SKILL.md frontmatter for ClawHub discovery

@@ -4,6 +4,15 @@ A monorepo of Mobilerun agent skills and OpenClaw plugins.
 
 ## Available Skills
 
+### [mobilerun-framework](./mobilerun-framework)
+
+Reference for the Mobilerun Python framework, CLI, device APIs, macros, and repository architecture.
+
+**Install via the skills CLI:**
+```bash
+npx skills add droidrun/skills --skill mobilerun-framework
+```
+
 ### [mobilerun-cloud](./mobilerun-cloud)
 
 Control real Android and iOS phones through the Mobilerun API -- tap, swipe, type, take screenshots, read the UI tree, and manage apps.
@@ -82,6 +91,9 @@ The `.skill` zip files are built automatically on every push to `master` and att
 ```
 ├── README.md
 ├── .github/workflows/           # auto-packaging + mobile-harness sync
+├── mobilerun-framework/
+│   ├── SKILL.md
+│   └── references/
 ├── mobilerun-cloud/
 │   ├── SKILL.md
 │   └── references/

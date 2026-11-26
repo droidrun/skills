@@ -150,7 +150,7 @@ shows the UDID or simulator behind each process.
    `/device/date` for the target Simulator.
 4. **No server**: start one (Setup).
 
-Cloud requires `MOBILERUN_CLOUD_API_KEY`, `MOBILERUN_API_BASE_URL`, and
+Cloud requires `MOBILERUN_API_KEY`, `MOBILERUN_API_BASE_URL`, and
 `MOBILERUN_CLOUD_DEVICE_ID`. Use
 `MOBILERUN_API_BASE_URL=https://api.mobilerun.ai/v1` unless the user provides a
 different endpoint.

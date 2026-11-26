@@ -40,7 +40,7 @@ internally for:
 Cloud devices require:
 
 ```bash
-export MOBILERUN_CLOUD_API_KEY="..."
+export MOBILERUN_API_KEY="..."
 export MOBILERUN_API_BASE_URL="https://api.mobilerun.ai/v1"
 export MOBILERUN_CLOUD_DEVICE_ID="..."
 ```
@@ -66,7 +66,7 @@ tab). Local mode needs no Mobilerun login.
 
 Do not print tokens or API keys in logs, chat, screenshots, or summaries. If an
 existing runtime exposes a differently named Mobilerun key, map it into
-`MOBILERUN_CLOUD_API_KEY` before running `mobilerun-core` code.
+`MOBILERUN_API_KEY` before running code.
 
 ## Runtime Registration
 
@@ -127,8 +127,7 @@ python -m pip install "mobilerun-core[local]"
 ```
 
 Provide the same environment variables listed above. If the host already
-provides `MOBILERUN_API_KEY`, set `MOBILERUN_CLOUD_API_KEY` to that value for
-`mobilerun-core`.
+provides `MOBILERUN_API_KEY`, use it directly; no legacy key alias is supported.
 
 ## Updating
 

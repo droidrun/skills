@@ -171,6 +171,10 @@ Reflects the Mobilerun 0.7.4 CLI. Deprecated top-level and device aliases are un
 | `mobilerun skills list` | — | --long, --json |  List skills and installed targets |
 | `mobilerun skills show` | NAME | — |  Show a bundled skill's path and description. |
 | `mobilerun skills uninstall` | NAMES... | --agent, --project, --dir | ⚠ Remove installed skills. |
+## webhook
+
+Use `mobilerun webhook register`, `list`, `get`, `delete` or `ping` to manage the current organization's endpoints. See the [webhook command table](webhooks.md#cli) for arguments, flags and signing-secret handling.
+
 ## workspace
 
 | Command | Arguments | Key flags | Purpose / risk |

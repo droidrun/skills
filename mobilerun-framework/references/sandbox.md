@@ -33,9 +33,13 @@ def hello(input: Input) -> Output:
 
 Use one top-level declaration per file, the canonical import above, literal decorator arguments and in-file Pydantic models. Put helpers, constants and lazy imports used by the function in its body; sibling files, assets and arbitrary dependencies are not bundled. Endpoint input schemas containing `$ref` are rejected. Deploy only trusted source: local inspection executes generated Python.
 
+Scheduled flows always pass `{}` to the function. Use an empty input model or give every input field a default. If the result must be constant, return it directly instead of reading it from an input field.
+
 For phone access, add `ctx: Context` (`from mobilerun_functions import Context`) and use `ctx.device()`. Set `device=` on the declaration or override it with `--device ID` or `--device-free`. With no device, endpoints default to device-free; for a schedule with no decorator device, choose via the interactive picker or pass an explicit flag in automation. Sandbox does not provision or delete phones.
 
 **Deploy, fire and enable require `paid` and can incur charges even without a phone. An enabled schedule can incur future charges after the CLI exits.** `MOBILERUN_BILLING` defaults to `paid`; explicit `--billing` or `billing=` wins. Reads, polling, disable and owned cleanup permit `no_commerce`. CLI mutations require interactive consent or `--yes`; pass `--yes` only after approval. Python deployment is explicit: `deploy("hello.py", yes=True)` (or pass `confirm=`) from `mobilerun.sandbox`. Calling a Python remote mutation is explicit authorization; it does not prompt.
+
+For a schedule that needs no phone, run `mobilerun sandbox deploy FILE --device-free` after getting approval for paid deployment. For unattended deployment, add `--yes` only after approval. The first successful deployment enables the schedule; use `mobilerun sandbox enable NAME` only to re-enable an owned flow that is disabled.
 
 ```sh
 mobilerun sandbox deploy hello.py
@@ -44,6 +48,8 @@ mobilerun sandbox runs hello --billing no_commerce
 ```
 
 `fire` returns an invocation ID without waiting. Use `--input-file FILE` instead of `--input` to load a JSON object from a file. Use `mobilerun sandbox list` to inspect functions and `mobilerun sandbox enable NAME` or `mobilerun sandbox disable NAME` to toggle owned flows. Disable schedules you no longer need. Both toggles accept multiple names and return a per-name `{name, status}` array with `--json`. See the [CLI index](cli.md#sandbox) for flags.
+
+To POST the result after a successful function step, [register a webhook](webhooks.md) and pass its endpoint UUID as a literal `webhook=` on the named `@cloud` declaration. Use an endpoint or schedule, not a function-only deployment. A successful webhook step means queued, not delivered.
 
 ## Remote and Run handles
 

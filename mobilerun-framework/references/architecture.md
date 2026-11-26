@@ -9,6 +9,7 @@ The source checkout's `mobilerun/README.md` and package READMEs are the detailed
 | `core/operator` | Operator contract |
 | `core/credentials`, `phone_number`, `mailbox`, `proxy` | Bindable resources; proxy and operator selection live on phones |
 | `core/workspace.py` | Account-wide file and app operations |
+| `core/webhooks` | [Cloud webhook endpoint management](webhooks.md) |
 | `clients/cloud` | Cloud SDK boundary, auth, transport and billing guards |
 | `clients/local` | Local emulator, APK, credential and polling helpers |
 | `clients/portal` | Portal setup, HTTP and state transport |

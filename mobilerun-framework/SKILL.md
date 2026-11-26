@@ -52,6 +52,7 @@ Context exit closes the handle. Existing cloud IDs are not automatically termina
 | Replay a macro | `mobilerun macro replay macro.json emulator-5554` |
 | Find the macro directory | `mobilerun macro path --json` |
 | Inspect sandbox deployments | `mobilerun sandbox list --billing no_commerce` |
+| Send function results to my server | `mobilerun webhook register`, then set `@cloud("name", webhook="ENDPOINT_ID")`; see [webhooks](references/webhooks.md) |
 | Discover skills | `mobilerun skills list` |
 | Manage MCP connection | `mobilerun mcp --help` |
 | Cloud authentication | `mobilerun account --help` |
@@ -74,6 +75,7 @@ Cloud resources and tasks can cost money; agent execution can consume LLM tokens
 - Calling `asyncio.sleep()` during a recording, or reading snapshot fields directly from the state controller. Use `device.wait()` and `await device.state.refresh()`.
 - Passing local credentials to cloud tasks, or assuming `no_commerce` protects against all destructive operations.
 - Assuming `@cloud` deploys on import. Ordinary calls run locally; deploy, fire and enable can incur charges even without a phone.
+- Passing a URL to `@cloud` or omitting the name. Use `@cloud("name", webhook="ENDPOINT_ID")` with the registered endpoint UUID.
 - Importing agents from shared framework packages.
 
 ## Contracts agents get wrong
@@ -107,6 +109,7 @@ Cloud resources and tasks can cost money; agent execution can consume LLM tokens
 - [Device operations](references/device-operations.md) — Read when: changing device settings, gestures, screenshots, apps, files or checking backend limits.
 - [Operators and macros](references/operators-and-macros.md) — Read when: executing instructions, recording actions or replaying guarded macros.
 - [Sandbox cloud functions](references/sandbox.md) — Read when: deploying `@cloud` endpoints or schedules, invoking remotely, inspecting runs or managing owned flows.
+- [Webhooks](references/webhooks.md) — Read when: sending sandbox results to a server, managing webhook endpoints or verifying signed deliveries.
 - [Resources and billing](references/resources-and-billing.md) — Read when: using cloud vaults, numbers, mailboxes or billing guards.
 - [Proxies](references/proxies.md) — Read when: creating, binding or switching cloud and local proxies.
 - [Payments](references/payments.md) — Read when: handling checkout, payment approval or pending-resource cleanup.

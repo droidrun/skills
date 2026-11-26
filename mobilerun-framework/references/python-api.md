@@ -1,5 +1,7 @@
 # Devices, state and workspace
 
+For async `CloudWebhooks` endpoint management, see the [webhook Python API](webhooks.md#python-api).
+
 ## Connect and close
 
 `connect()` is idempotent; awaiting a device, calling `await device.connect()`, and entering its async context all connect. Context exit calls `close()`. Exiting any wrapper context also closes its wrapped device, even inside an outer device context. Do not reuse the wrapped handle after wrapper exit; keep work inside its lifetime or open a fresh device. Use one lifecycle form and clean up in `finally` when not using a context.
